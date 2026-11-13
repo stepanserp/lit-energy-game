@@ -642,8 +642,8 @@ function spawnCan() {
    
 
 
-window.hasLoadedSave = false;
 
+window.hasLoadedSave = false;
 
 async function loadGameSave() {
     const tg = window.Telegram?.WebApp;
@@ -666,18 +666,12 @@ async function loadGameSave() {
                 },
                 body: JSON.stringify({
                     action: "load",
-                    initData: initData
+                    initData
                 })
             }
         );
 
         const result = await response.json();
-tg.showAlert(
-    "ЗАГРУЗКА: " + response.status +
-    "\nУспех: " + result.success +
-    "\nБаланс в базе: " +
-    (result.saveData?.gameState?.money ?? "НЕТ ДАННЫХ")
-);
 
         if (!response.ok || !result.success) {
             throw new Error(result.error || "Ошибка загрузки");
@@ -724,17 +718,18 @@ tg.showAlert(
 
         window.hasLoadedSave = true;
 
-        console.log("ИГРОВОЕ СОХРАНЕНИЕ УСПЕШНО ЗАГРУЖЕНО");
+        console.log("Игровое сохранение успешно загружено");
 
     } catch (error) {
         console.error("Ошибка загрузки:", error);
 
-        tg.showAlert(
-            "Не удалось загрузить сохранение: " + error.message
-        );
+        if (tg) {
+            tg.showAlert(
+                "Не удалось загрузить сохранение: " + error.message
+            );
+        }
     }
 }
-
 
 
 let saveTimer = null;
@@ -742,7 +737,6 @@ let saveInProgress = false;
 let savePending = false;
 
 async function saveGameSave() {
-  
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData;
 
@@ -780,8 +774,8 @@ async function saveGameSave() {
                 },
                 body: JSON.stringify({
                     action: "save",
-                    initData: initData,
-                    saveData: saveData
+                    initData,
+                    saveData
                 })
             }
         );
@@ -793,9 +787,10 @@ async function saveGameSave() {
         }
 
         console.log("Прогресс сохранён");
-} catch (error) {
-    console.error("Ошибка сохранения:", error);
-    alert("ОШИБКА СОХРАНЕНИЯ: " + error.message);
+
+    } catch (error) {
+        console.error("Ошибка сохранения:", error);
+
     } finally {
         saveInProgress = false;
 
@@ -806,10 +801,12 @@ async function saveGameSave() {
     }
 }
 
+
 function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveGameSave, 2000);
 }
+
 
 document.getElementById('device-start').addEventListener('click', async () => {
     const startButton = document.getElementById('device-start');
@@ -817,21 +814,27 @@ document.getElementById('device-start').addEventListener('click', async () => {
 
     await loadGameSave();
 
-    document.body.classList.add('device-' + chosenDevice, 'game-started');
+    document.body.classList.add(
+        'device-' + chosenDevice,
+        'game-started'
+    );
+
     deviceGate.remove();
 
- gameState.lastTime = performance.now();
-init();
+    gameState.lastTime = performance.now();
 
-tg.showAlert("БАЛАНС ПОСЛЕ ЗАПУСКА ИГРЫ: " + gameState.money);
+    init();
 });
+
 
 if (window.Telegram?.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
     console.log("Telegram WebApp initialized");
 }
+
 selectDevice(chosenDevice);
+
 </script>
 </body>
 </html>
