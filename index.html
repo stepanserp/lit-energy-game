@@ -762,8 +762,9 @@ async function saveGameSave() {
         }
 
         console.log("Прогресс сохранён");
-    } catch (error) {
-        console.error("Ошибка сохранения:", error);
+} catch (error) {
+    console.error("Ошибка сохранения:", error);
+    alert("ОШИБКА СОХРАНЕНИЯ: " + error.message);
     } finally {
         saveInProgress = false;
 
