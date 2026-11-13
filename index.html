@@ -643,25 +643,71 @@ function claimReward(reward) {
         });
     }
     
-    function buyUpgrade(upg, cost) {
-        if (gameState.money < cost) return; 
-        gameState.money -= cost; 
-        upg.level++;
-        if (upg.id === 'spawn_speed') gameState.spawnRate = Math.max(1, gameState.spawnRate - 1);
-        else if (upg.id === 'spawn_level') gameState.spawnLevel++;
-        else if (upg.id === 'unlock') { for (let i = 1; i <= 12; i++) if (!gameState.unlockedLevels.includes(i)) gameState.unlockedLevels.push(i); }
-        updateUI(); 
-        renderShop(); 
-        showNotification("Улучшение куплено!");
+ function buyUpgrade(upg, cost) {
+    if (upg.level >= upg.max) return;
+    if (gameState.money < cost) return;
+
+    if (upg.id === 'spawn_level' && gameState.spawnLevel >= 12) {
+        return;
     }
+
+    gameState.money -= cost;
+    upg.level++;
+
+    if (upg.id === 'spawn_speed') {
+        gameState.spawnRate = Math.max(1, gameState.spawnRate - 1);
+    }
+    else if (upg.id === 'spawn_level') {
+        gameState.spawnLevel = Math.min(12, gameState.spawnLevel + 1);
+    }
+    else if (upg.id === 'unlock') {
+        for (let i = 1; i <= 12; i++) {
+            if (!gameState.unlockedLevels.includes(i)) {
+                gameState.unlockedLevels.push(i);
+            }
+        }
+    }
+
+    updateUI();
+    renderShop();
+    showNotification("Улучшение куплено!");
+
+    saveGameSave();
+}
     
-    function buyCan(level, cost) {
-        if (gameState.money < cost) return;
-        const emptyIndices = gameState.grid.map((val, i) => val === 0 ? i : -1).filter(i => i !== -1);
-        if (emptyIndices.length === 0) { showNotification("Нет свободного места!"); return; }
-        gameState.money -= cost; const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)]; gameState.grid[randomIndex] = level;
-        updateGrid(); recalculateIncome(); showNotification("Банка куплена!"); const cell = gridEl.children[randomIndex]; cell.classList.add('pop'); setTimeout(() => cell.classList.remove('pop'), 400);
+function buyCan(level, cost) {
+    if (!Number.isInteger(level) || level < 1 || level > 12) return;
+    if (gameState.money < cost) return;
+
+    const emptyIndices = gameState.grid
+        .map((val, i) => val === 0 ? i : -1)
+        .filter(i => i !== -1);
+
+    if (emptyIndices.length === 0) {
+        showNotification("Нет свободного места!");
+        return;
     }
+
+    gameState.money -= cost;
+
+    const randomIndex = emptyIndices[
+        Math.floor(Math.random() * emptyIndices.length)
+    ];
+
+    gameState.grid[randomIndex] = level;
+
+    updateGrid();
+    recalculateIncome();
+    updateUI();
+
+    showNotification("Банка куплена!");
+
+    const cell = gridEl.children[randomIndex];
+    cell.classList.add('pop');
+    setTimeout(() => cell.classList.remove('pop'), 400);
+
+    saveGameSave();
+}
     
     function showNotification(text) { notificationEl.textContent = text; notificationEl.classList.add('show'); setTimeout(() => notificationEl.classList.remove('show'), 2000); }
     
@@ -759,6 +805,39 @@ async function loadGameSave() {
 
         if (typeof saved.gameTime === "number") {
             gameState.gameTime = saved.gameTime;
+// Восстанавливаем уровни улучшений магазина
+if (saved.upgrades && typeof saved.upgrades === "object") {
+    UPGRADES.forEach(upg => {
+        const savedLevel = saved.upgrades[upg.id];
+
+        if (typeof savedLevel === "number") {
+            upg.level = Math.min(upg.max, Math.max(0, savedLevel));
+        }
+    });
+} else {
+    // Перенос старых сохранений на новую систему
+    const spawnLevelUpgrade = UPGRADES.find(u => u.id === 'spawn_level');
+    const spawnSpeedUpgrade = UPGRADES.find(u => u.id === 'spawn_speed');
+    const unlockUpgrade = UPGRADES.find(u => u.id === 'unlock');
+
+    spawnLevelUpgrade.level = Math.min(11, Math.max(0, gameState.spawnLevel - 1));
+    spawnSpeedUpgrade.level = Math.min(4, Math.max(0, 10 - gameState.spawnRate));
+
+    if (gameState.unlockedLevels.length >= 12) {
+        unlockUpgrade.level = 1;
+    }
+}
+
+// Не разрешаем спавну выходить за пределы 12 уровней
+const spawnUpgrade = UPGRADES.find(u => u.id === 'spawn_level');
+gameState.spawnLevel = Math.min(12, Math.max(1, spawnUpgrade.level + 1));
+
+// Очищаем список открытых банок от несуществующих уровней
+gameState.unlockedLevels = [...new Set(
+    gameState.unlockedLevels.filter(level =>
+        Number.isInteger(level) && level >= 1 && level <= 12
+    )
+)];
         }
 
         // Восстанавливаем уже полученные награды
@@ -814,6 +893,10 @@ async function saveGameSave() {
                 unlockedLevels: gameState.unlockedLevels,
                 incomeMultiplier: gameState.incomeMultiplier,
                 gameTime: gameState.gameTime,
+upgrades: UPGRADES.reduce((result, upg) => {
+    result[upg.id] = upg.level;
+    return result;
+}, {}),
 
                 // Сохраняем ID полученных наград
                 claimedRewards: REWARDS
