@@ -795,6 +795,11 @@ document.getElementById('device-start').addEventListener('click', async () => {
     init();
 });
 
+if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+    console.log("Telegram WebApp initialized");
+}
 selectDevice(chosenDevice);
 </script>
 </body>
