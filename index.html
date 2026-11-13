@@ -514,16 +514,60 @@ function spawnCan() {
             rewardsListEl.appendChild(div);
         });
     }
-    function claimReward(reward) {
-        if (reward.claimed || gameState.gameTime < reward.time) return; reward.claimed = true;
-        if (reward.type === 'money') { gameState.money += reward.value; showNotification(`+${reward.value.toLocaleString('ru-RU')} монет!`); }
-        else if (reward.type === 'can') {
-            const emptyIndices = gameState.grid.map((v, i) => v === 0 ? i : -1).filter(i => i !== -1);
-            if (emptyIndices.length > 0) { const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)]; gameState.grid[randomIndex] = reward.value; if (!gameState.unlockedLevels.includes(reward.value)) gameState.unlockedLevels.push(reward.value); updateGrid(); recalculateIncome(); renderShop(); showNotification(`Получена: ${NAMES[reward.value]}!`); }
-            else { const sellPrice = Math.floor((BUY_COSTS[reward.value] || 100) / 2); gameState.money += sellPrice; showNotification(`Мест нет! Продано за ${sellPrice} 💰`); }
-        } else if (reward.type === 'multiplier') { gameState.incomeMultiplier *= reward.value; recalculateIncome(); showNotification(`Прибыль умножена на x${reward.value}!`); }
-        renderRewards(); updateRewardsAvailability(); updateUI();
+   
+function claimReward(reward) {
+    if (reward.claimed || gameState.gameTime < reward.time) return;
+
+    reward.claimed = true;
+
+    if (reward.type === 'money') {
+        gameState.money += reward.value;
+        showNotification(`+${reward.value.toLocaleString('ru-RU')} монет!`);
     }
+    else if (reward.type === 'can') {
+        const emptyIndices = gameState.grid
+            .map((v, i) => v === 0 ? i : -1)
+            .filter(i => i !== -1);
+
+        if (emptyIndices.length > 0) {
+            const randomIndex = emptyIndices[
+                Math.floor(Math.random() * emptyIndices.length)
+            ];
+
+            gameState.grid[randomIndex] = reward.value;
+
+            if (!gameState.unlockedLevels.includes(reward.value)) {
+                gameState.unlockedLevels.push(reward.value);
+            }
+
+            updateGrid();
+            recalculateIncome();
+            renderShop();
+
+            showNotification(`Получена: ${NAMES[reward.value]}!`);
+        } else {
+            const sellPrice = Math.floor(
+                (BUY_COSTS[reward.value] || 100) / 2
+            );
+
+            gameState.money += sellPrice;
+            showNotification(`Мест нет! Продано за ${sellPrice} 💰`);
+        }
+    }
+    else if (reward.type === 'multiplier') {
+        gameState.incomeMultiplier *= reward.value;
+        recalculateIncome();
+        showNotification(`Прибыль умножена на x${reward.value}!`);
+    }
+
+    renderRewards();
+    updateRewardsAvailability();
+    updateUI();
+
+    // Немедленно сохраняем полученную награду
+    saveGameSave();
+}
+
     function updateRewardsAvailability() { let hasAvailable = false; REWARDS.forEach(r => { if (!r.claimed && gameState.gameTime >= r.time) hasAvailable = true; }); rewardsBadge.style.display = hasAvailable ? 'flex' : 'none'; }
     function updateUI() { moneyEl.textContent = Math.floor(gameState.money).toLocaleString('ru-RU'); document.querySelectorAll('.shop-item').forEach(el => { const cost = parseInt(el.dataset.cost); if (gameState.money >= cost) el.classList.remove('disabled'); else el.classList.add('disabled'); }); }
     
@@ -643,6 +687,7 @@ function spawnCan() {
 
 
 
+
 window.hasLoadedSave = false;
 
 async function loadGameSave() {
@@ -716,6 +761,13 @@ async function loadGameSave() {
             gameState.gameTime = saved.gameTime;
         }
 
+        // Восстанавливаем уже полученные награды
+        if (Array.isArray(saved.claimedRewards)) {
+            REWARDS.forEach(reward => {
+                reward.claimed = saved.claimedRewards.includes(reward.id);
+            });
+        }
+
         window.hasLoadedSave = true;
 
         console.log("Игровое сохранение успешно загружено");
@@ -761,7 +813,12 @@ async function saveGameSave() {
                 spawnLevel: gameState.spawnLevel,
                 unlockedLevels: gameState.unlockedLevels,
                 incomeMultiplier: gameState.incomeMultiplier,
-                gameTime: gameState.gameTime
+                gameTime: gameState.gameTime,
+
+                // Сохраняем ID полученных наград
+                claimedRewards: REWARDS
+                    .filter(reward => reward.claimed)
+                    .map(reward => reward.id)
             }
         };
 
