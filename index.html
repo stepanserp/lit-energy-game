@@ -644,9 +644,12 @@ function spawnCan() {
 
 window.hasLoadedSave = false;
 
+
 async function loadGameSave() {
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData;
+
+    window.hasLoadedSave = false;
 
     if (!initData) {
         console.warn("Telegram initData отсутствует");
@@ -654,8 +657,6 @@ async function loadGameSave() {
     }
 
     try {
-window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ В SUPABASE");
-window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ");
         const response = await fetch(
             "https://dscxjrafzbaenkwaesfb.supabase.co/functions/v1/telegram-save",
             {
@@ -670,49 +671,61 @@ window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ");
             }
         );
 
-window.Telegram.WebApp.showAlert("SUPABASE ОТВЕТИЛ: " + response.status);
-window.Telegram.WebApp.showAlert("ОТВЕТ ПОЛУЧЕН: " + response.status);
-        const responseText = await response.text();
+        const result = await response.json();
 
-window.Telegram.WebApp.showAlert(
-    "ОШИБКА SUPABASE: " + response.status +
-    "\n" + responseText
-);
-
-const result = JSON.parse(responseText);
-
-        if (!response.ok) {
+        if (!response.ok || !result.success) {
             throw new Error(result.error || "Ошибка загрузки");
         }
 
         if (!result.saveData) {
-            console.log("Новое сохранение игрока");
+            console.log("Сохранение не найдено — новая игра");
             return;
         }
 
         const saved = result.saveData.gameState;
 
-        if (saved && typeof saved === "object") {
-            if (typeof saved.money === "number") gameState.money = saved.money;
-            if (Array.isArray(saved.grid) && saved.grid.length === 12) {
-                gameState.grid = saved.grid;
-            }
-            if (typeof saved.spawnRate === "number") gameState.spawnRate = saved.spawnRate;
-            if (typeof saved.spawnLevel === "number") gameState.spawnLevel = saved.spawnLevel;
-            if (Array.isArray(saved.unlockedLevels)) {
-                gameState.unlockedLevels = saved.unlockedLevels;
-            }
-            if (typeof saved.incomeMultiplier === "number") {
-                gameState.incomeMultiplier = saved.incomeMultiplier;
-            }
-            if (typeof saved.gameTime === "number") gameState.gameTime = saved.gameTime;
-
-            window.hasLoadedSave = true;
+        if (!saved || typeof saved !== "object") {
+            throw new Error("В сохранении отсутствует gameState");
         }
 
-        console.log("Сохранение загружено");
+        if (typeof saved.money === "number") {
+            gameState.money = saved.money;
+        }
+
+        if (Array.isArray(saved.grid) && saved.grid.length === 12) {
+            gameState.grid = saved.grid;
+        }
+
+        if (typeof saved.spawnRate === "number") {
+            gameState.spawnRate = saved.spawnRate;
+        }
+
+        if (typeof saved.spawnLevel === "number") {
+            gameState.spawnLevel = saved.spawnLevel;
+        }
+
+        if (Array.isArray(saved.unlockedLevels)) {
+            gameState.unlockedLevels = saved.unlockedLevels;
+        }
+
+        if (typeof saved.incomeMultiplier === "number") {
+            gameState.incomeMultiplier = saved.incomeMultiplier;
+        }
+
+        if (typeof saved.gameTime === "number") {
+            gameState.gameTime = saved.gameTime;
+        }
+
+        window.hasLoadedSave = true;
+
+        console.log("ИГРОВОЕ СОХРАНЕНИЕ УСПЕШНО ЗАГРУЖЕНО");
+
     } catch (error) {
-        console.error("Ошибка загрузки сохранения:", error);
+        console.error("Ошибка загрузки:", error);
+
+        tg.showAlert(
+            "Не удалось загрузить сохранение: " + error.message
+        );
     }
 }
 
@@ -723,8 +736,7 @@ let saveInProgress = false;
 let savePending = false;
 
 async function saveGameSave() {
-    window.Telegram.WebApp.showAlert("ФУНКЦИЯ СОХРАНЕНИЯ ЗАПУСТИЛАСЬ");
-
+  
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData;
 
