@@ -672,6 +672,12 @@ async function loadGameSave() {
         );
 
         const result = await response.json();
+tg.showAlert(
+    "ЗАГРУЗКА: " + response.status +
+    "\nУспех: " + result.success +
+    "\nБаланс в базе: " +
+    (result.saveData?.gameState?.money ?? "НЕТ ДАННЫХ")
+);
 
         if (!response.ok || !result.success) {
             throw new Error(result.error || "Ошибка загрузки");
