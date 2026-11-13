@@ -301,22 +301,24 @@
     
     const gridEl = document.getElementById('grid'), moneyEl = document.getElementById('money'), shopListEl = document.getElementById('shop-list'), notificationEl = document.getElementById('notification'), trashEl = document.getElementById('trash'), sellNotifContainer = document.getElementById('sell-notifications'), gameContainer = document.querySelector('.game-container'), rewardsModal = document.getElementById('rewards-modal'), rewardsListEl = document.getElementById('rewards-list'), rewardsBadge = document.getElementById('rewards-badge'), openRewardsBtn = document.getElementById('open-rewards'), closeRewardsBtn = document.getElementById('close-rewards'), spawnBar = document.getElementById('spawn-bar'), modalGameTime = document.getElementById('modal-game-time');
     
-    function init() { 
-        createGrid(); 
-        renderShop(); 
-        setupTrash(); 
-        setupMobileShop();
-        setupRewardsUI(); 
-        updateUI(); 
-        
-        gameState.grid[5] = 1; 
-        gameState.grid[6] = 1; 
-        
-        updateGrid(); 
-        recalculateIncome(); 
-        schedulePiggy(); 
-        requestAnimationFrame(gameLoop); 
+function init() {
+    createGrid();
+    renderShop();
+    setupTrash();
+    setupMobileShop();
+    setupRewardsUI();
+
+    if (!window.hasLoadedSave) {
+        gameState.grid[5] = 1;
+        gameState.grid[6] = 1;
     }
+
+    updateUI();
+    updateGrid();
+    recalculateIncome();
+    schedulePiggy();
+    requestAnimationFrame(gameLoop);
+}
     
     function createGrid() {
         gridEl.innerHTML = '';
@@ -418,18 +420,41 @@
         else if (m > 0) return `${m} мин ${s} сек`;
         else return `${s} сек`;
     }
-    
-    function gameLoop(timestamp) {
-        const dt = (timestamp - gameState.lastTime) / 1000; gameState.lastTime = timestamp;
-        gameState.money += gameState.incomePerSecond * dt; gameState.gameTime += dt;
-        updateRewardsAvailability(); gameState.spawnTimer += dt;
-        spawnBar.style.width = `${(gameState.spawnTimer / gameState.spawnRate) * 100}%`;
-        if (gameState.spawnTimer >= gameState.spawnRate) { gameState.spawnTimer = 0; spawnCan(); }
-        if (rewardsModal.classList.contains('active')) { modalGameTime.textContent = `Время в игре: ${formatTime(gameState.gameTime)}`; }
-        updateUI(); requestAnimationFrame(gameLoop);
+  let saveElapsed = 0;
+
+function gameLoop(timestamp) {
+    const dt = (timestamp - gameState.lastTime) / 1000;
+    gameState.lastTime = timestamp;
+
+    gameState.money += gameState.incomePerSecond * dt;
+    gameState.gameTime += dt;
+
+    updateRewardsAvailability();
+    gameState.spawnTimer += dt;
+
+    spawnBar.style.width = `${(gameState.spawnTimer / gameState.spawnRate) * 100}%`;
+
+    if (gameState.spawnTimer >= gameState.spawnRate) {
+        gameState.spawnTimer = 0;
+        spawnCan();
     }
-    
-    function spawnCan() {
+
+    if (rewardsModal.classList.contains('active')) {
+        modalGameTime.textContent = `Время в игре: ${formatTime(gameState.gameTime)}`;
+    }
+
+    saveElapsed += dt;
+
+    if (saveElapsed >= 10) {
+        saveElapsed = 0;
+        saveGameSave();
+    }
+
+    updateUI();
+    requestAnimationFrame(gameLoop);
+}
+
+function spawnCan() {
         const emptyIndices = gameState.grid.map((val, i) => val === 0 ? i : -1).filter(i => i !== -1);
         if (emptyIndices.length === 0) { const level = gameState.spawnLevel; const sellPrice = Math.floor((BUY_COSTS[level] || 100) / 2); gameState.money += sellPrice; showSellNotification(`+ ${sellPrice} 💰`); return; }
         const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)]; gameState.grid[randomIndex] = gameState.spawnLevel;
@@ -614,13 +639,160 @@
         hint.textContent = message;
         setTimeout(() => hint.textContent = 'Настройку можно изменить, перезагрузив страницу.', 2200);
     }
-    document.getElementById('device-start').addEventListener('click', () => {
-        document.body.classList.add('device-' + chosenDevice, 'game-started');
-        deviceGate.remove();
-        gameState.lastTime = performance.now();
-        init();
-    });
-    selectDevice(chosenDevice);
+   
+
+
+window.hasLoadedSave = false;
+
+async function loadGameSave() {
+    const tg = window.Telegram?.WebApp;
+    const initData = tg?.initData;
+
+    if (!initData) {
+        console.warn("Telegram initData отсутствует");
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "https://dscxjrafzbaenkwaesfb.supabase.co/functions/v1/telegram-save",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "load",
+                    initData: initData
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Ошибка загрузки");
+        }
+
+        if (!result.saveData) {
+            console.log("Новое сохранение игрока");
+            return;
+        }
+
+        const saved = result.saveData.gameState;
+
+        if (saved && typeof saved === "object") {
+            if (typeof saved.money === "number") gameState.money = saved.money;
+            if (Array.isArray(saved.grid) && saved.grid.length === 12) {
+                gameState.grid = saved.grid;
+            }
+            if (typeof saved.spawnRate === "number") gameState.spawnRate = saved.spawnRate;
+            if (typeof saved.spawnLevel === "number") gameState.spawnLevel = saved.spawnLevel;
+            if (Array.isArray(saved.unlockedLevels)) {
+                gameState.unlockedLevels = saved.unlockedLevels;
+            }
+            if (typeof saved.incomeMultiplier === "number") {
+                gameState.incomeMultiplier = saved.incomeMultiplier;
+            }
+            if (typeof saved.gameTime === "number") gameState.gameTime = saved.gameTime;
+
+            window.hasLoadedSave = true;
+        }
+
+        console.log("Сохранение загружено");
+    } catch (error) {
+        console.error("Ошибка загрузки сохранения:", error);
+    }
+}
+
+
+
+let saveTimer = null;
+let saveInProgress = false;
+let savePending = false;
+
+async function saveGameSave() {
+    const tg = window.Telegram?.WebApp;
+    const initData = tg?.initData;
+
+    if (!initData) {
+        console.warn("Невозможно сохранить: Telegram initData отсутствует");
+        return;
+    }
+
+    if (saveInProgress) {
+        savePending = true;
+        return;
+    }
+
+    saveInProgress = true;
+
+    try {
+        const saveData = {
+            gameState: {
+                money: gameState.money,
+                grid: gameState.grid,
+                spawnRate: gameState.spawnRate,
+                spawnLevel: gameState.spawnLevel,
+                unlockedLevels: gameState.unlockedLevels,
+                incomeMultiplier: gameState.incomeMultiplier,
+                gameTime: gameState.gameTime
+            }
+        };
+
+        const response = await fetch(
+            "https://dscxjrafzbaenkwaesfb.supabase.co/functions/v1/telegram-save",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "save",
+                    initData: initData,
+                    saveData: saveData
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || "Ошибка сохранения");
+        }
+
+        console.log("Прогресс сохранён");
+    } catch (error) {
+        console.error("Ошибка сохранения:", error);
+    } finally {
+        saveInProgress = false;
+
+        if (savePending) {
+            savePending = false;
+            saveGameSave();
+        }
+    }
+}
+
+function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveGameSave, 2000);
+}
+
+document.getElementById('device-start').addEventListener('click', async () => {
+    const startButton = document.getElementById('device-start');
+    startButton.disabled = true;
+
+    await loadGameSave();
+
+    document.body.classList.add('device-' + chosenDevice, 'game-started');
+    deviceGate.remove();
+
+    gameState.lastTime = performance.now();
+    init();
+});
+
+selectDevice(chosenDevice);
 </script>
 </body>
 </html>
