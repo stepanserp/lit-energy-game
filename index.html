@@ -820,8 +820,10 @@ document.getElementById('device-start').addEventListener('click', async () => {
     document.body.classList.add('device-' + chosenDevice, 'game-started');
     deviceGate.remove();
 
-    gameState.lastTime = performance.now();
-    init();
+ gameState.lastTime = performance.now();
+init();
+
+tg.showAlert("БАЛАНС ПОСЛЕ ЗАПУСКА ИГРЫ: " + gameState.money);
 });
 
 if (window.Telegram?.WebApp) {
