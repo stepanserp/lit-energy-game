@@ -668,6 +668,8 @@ async function loadGameSave() {
             }
         );
 
+window.Telegram.WebApp.showAlert("ОТВЕТ SUPABASE: " + response.status);
+
         const result = await response.json();
 
         if (!response.ok) {
