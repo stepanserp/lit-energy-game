@@ -655,6 +655,7 @@ async function loadGameSave() {
 
     try {
 window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ В SUPABASE");
+window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ");
         const response = await fetch(
             "https://dscxjrafzbaenkwaesfb.supabase.co/functions/v1/telegram-save",
             {
@@ -670,7 +671,7 @@ window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ В SUPABASE");
         );
 
 window.Telegram.WebApp.showAlert("SUPABASE ОТВЕТИЛ: " + response.status);
-
+window.Telegram.WebApp.showAlert("ОТВЕТ ПОЛУЧЕН: " + response.status);
         const result = await response.json();
 
         if (!response.ok) {
