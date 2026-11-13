@@ -714,7 +714,10 @@ let savePending = false;
 async function saveGameSave() {
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData;
-
+alert(
+    "Telegram WebApp: " + (!!tg) +
+    "\ninitData: " + (!!initData)
+);
     if (!initData) {
         console.warn("Невозможно сохранить: Telegram initData отсутствует");
         return;
