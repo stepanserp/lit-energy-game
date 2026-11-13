@@ -712,7 +712,7 @@ let saveInProgress = false;
 let savePending = false;
 
 async function saveGameSave() {
-    alert("ФУНКЦИЯ СОХРАНЕНИЯ ЗАПУСТИЛАСЬ");
+    window.Telegram.WebApp.showAlert("ФУНКЦИЯ СОХРАНЕНИЯ ЗАПУСТИЛАСЬ");
 
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData;
