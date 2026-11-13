@@ -672,7 +672,14 @@ window.Telegram.WebApp.showAlert("НАЧИНАЮ ОТПРАВКУ");
 
 window.Telegram.WebApp.showAlert("SUPABASE ОТВЕТИЛ: " + response.status);
 window.Telegram.WebApp.showAlert("ОТВЕТ ПОЛУЧЕН: " + response.status);
-        const result = await response.json();
+        const responseText = await response.text();
+
+window.Telegram.WebApp.showAlert(
+    "ОШИБКА SUPABASE: " + response.status +
+    "\n" + responseText
+);
+
+const result = JSON.parse(responseText);
 
         if (!response.ok) {
             throw new Error(result.error || "Ошибка загрузки");
