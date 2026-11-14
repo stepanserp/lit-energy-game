@@ -289,86 +289,33 @@ body.device-desktop .board-section > .spawn-timer-container {
     -webkit-user-select: none;
 }
 /* Быстрая прокрутка страницы на телефоне */
+/* Ползунок прокрутки страницы на телефоне */
 .mobile-page-nav {
     display: none;
 }
 
 body.device-phone .mobile-page-nav {
     position: fixed;
-    left: 7px;
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 500;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
     padding: 10px 5px;
-    background: rgba(10, 25, 25, 0.88);
-    border: 1px solid var(--accent);
-    border-radius: 25px;
-    box-shadow: 0 0 14px var(--accent-glow);
+    background: rgba(10, 25, 25, 0.92);
+    border: 1px solid #80D8D0;
+    border-radius: 20px;
+    box-shadow: 0 0 12px rgba(128, 216, 208, 0.3);
 }
 
-.mobile-page-nav button {
-    width: 38px;
-    height: 38px;
-    border: 0;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #16cfc5, #087b77);
-    color: #001817;
-    font-size: 20px;
-    font-weight: 900;
+#page-scroll-slider {
+    accent-color: #80D8D0 !important;
+    width: 30px !important;
+    height: 160px !important;
     cursor: pointer;
-    touch-action: manipulation;
-}
-
-.mobile-page-nav button:active {
-    transform: scale(0.9);
-}
-
-/* Минималистичные стрелки прокрутки */
-.mobile-page-nav {
-    display: none;
-}
-
-body.device-phone .mobile-page-nav {
-    position: fixed;
-    left: 5px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 500;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-}
-
-body.device-phone .mobile-page-nav button {
-    width: 24px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: var(--accent);
-    font-size: 19px;
-    font-weight: 900;
-    line-height: 1;
-    box-shadow: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-
-body.device-phone .mobile-page-nav button:active {
-    transform: scale(0.85);
-}
-
-.mobile-page-nav-line {
-    display: none;
+    touch-action: none;
 }
     </style>
 </head>
@@ -446,7 +393,7 @@ body.device-phone .mobile-page-nav button:active {
             height: 150px;
             margin: 0;
             padding: 0;
-            accent-color: #28a745;
+            accent-color: #80D8D0;
             cursor: pointer;
             touch-action: none;
         "
