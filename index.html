@@ -650,6 +650,7 @@ setupAutoSpawnToggle();
     requestAnimationFrame(gameLoop);
 }
     
+
 function setupAutoSpawnToggle() {
     const button = document.createElement('button');
 
@@ -663,25 +664,36 @@ function setupAutoSpawnToggle() {
     button.style.fontWeight = 'bold';
     button.style.cursor = 'pointer';
 
+    const trashEl = document.getElementById('trash');
+    const rebirthButton = document.getElementById('open-rebirth');
+    const giftsButton = document.getElementById('open-rewards');
+
+    const isPhone = document.body.classList.contains('device-phone');
+
     function updateButton() {
-    button.textContent = gameState.autoSpawnEnabled
-        ? 'АВТОСПАВН: ВКЛ'
-        : 'АВТОСПАВН: ВЫКЛ';
+        if (isPhone) {
+            button.textContent = gameState.autoSpawnEnabled ? '✅' : '❌';
+            button.title = gameState.autoSpawnEnabled
+                ? 'Автоспавн включён'
+                : 'Автоспавн выключен';
+        } else {
+            button.textContent = gameState.autoSpawnEnabled
+                ? 'АВТОСПАВН: ВКЛ'
+                : 'АВТОСПАВН: ВЫКЛ';
+        }
 
-    button.style.background = gameState.autoSpawnEnabled
-        ? '#28a745'
-        : '#777';
+        button.style.background = gameState.autoSpawnEnabled
+            ? '#28a745'
+            : '#777';
 
-    button.style.color = '#fff';
+        button.style.color = '#fff';
 
-    // Скрываем или показываем полосу автоспавна
-    spawnBar.parentElement.style.display =
-        gameState.autoSpawnEnabled ? '' : 'none';
-}
+        spawnBar.parentElement.style.display =
+            gameState.autoSpawnEnabled ? '' : 'none';
+    }
 
     button.addEventListener('click', () => {
         gameState.autoSpawnEnabled = !gameState.autoSpawnEnabled;
-
         updateButton();
         saveGameSave();
 
@@ -693,29 +705,92 @@ function setupAutoSpawnToggle() {
     });
 
     spawnBar.parentElement.insertAdjacentElement('afterend', button);
-const anchor = spawnBar.parentElement;
-const trashEl = document.getElementById('trash');
-const rebirthButton = document.getElementById('open-rebirth');
 
-// Переносим мусорку выше автоспавна
-if (trashEl) {
-    anchor.insertAdjacentElement('afterend', trashEl);
-}
+    if (isPhone) {
+        const bottomBar = document.createElement('div');
+        bottomBar.id = 'mobile-bottom-bar';
 
-// Переносим перерождение под автоспавн
-if (rebirthButton) {
-    button.insertAdjacentElement('afterend', rebirthButton);
+        bottomBar.style.cssText = `
+            position: fixed;
+            left: 10px;
+            right: 10px;
+            bottom: calc(10px + env(safe-area-inset-bottom));
+            z-index: 99999;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            padding: 8px;
+            background: rgba(20, 20, 25, 0.96);
+            border: 1px solid #444;
+            border-radius: 16px;
+            box-sizing: border-box;
+        `;
 
-    rebirthButton.style.display = 'block';
-    rebirthButton.style.width = '100%';
-    rebirthButton.style.marginTop = '10px';
-    rebirthButton.style.padding = '12px';
-}
+        const controls = [
+            giftsButton,
+            rebirthButton,
+            trashEl,
+            button
+        ];
 
+        controls.forEach((control, index) => {
+            if (!control) return;
+
+            bottomBar.appendChild(control);
+
+            control.style.cssText += `
+                width: 100%;
+                height: 54px;
+                min-width: 0;
+                margin: 0;
+                padding: 4px;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px;
+                font-size: 22px;
+                font-weight: bold;
+                cursor: pointer;
+            `;
+
+            if (index === 0) {
+                control.textContent = '🎁';
+                control.setAttribute('aria-label', 'Награды');
+            }
+
+            if (index === 1) {
+                control.textContent = '🔁';
+                control.setAttribute('aria-label', 'Перерождение');
+            }
+
+            if (index === 2) {
+                control.textContent = '🗑️';
+                control.setAttribute('aria-label', 'Мусорка');
+            }
+        });
+
+        document.body.appendChild(bottomBar);
+        document.body.style.paddingBottom = '90px';
+
+    } else {
+        const anchor = spawnBar.parentElement;
+
+        if (trashEl) {
+            anchor.insertAdjacentElement('afterend', trashEl);
+        }
+
+        if (rebirthButton) {
+            button.insertAdjacentElement('afterend', rebirthButton);
+            rebirthButton.style.display = 'block';
+            rebirthButton.style.width = '100%';
+            rebirthButton.style.marginTop = '10px';
+            rebirthButton.style.padding = '12px';
+        }
+    }
 
     updateButton();
 }
-  
 function createGrid() {
     gridEl.innerHTML = '';
 
@@ -2438,9 +2513,8 @@ gameState.unlockedLevels = [...new Set(
         Number.isInteger(level) && level >= 1 && level <= 12
     )
 )];
-        }
 
-        // Восстанавливаем уже полученные награды
+// Восстанавливаем уже полученные награды
         if (Array.isArray(saved.claimedRewards)) {
             REWARDS.forEach(reward => {
                 reward.claimed = saved.claimedRewards.includes(reward.id);
