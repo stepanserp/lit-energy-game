@@ -3363,8 +3363,12 @@ if (autoUpgradeContainer) {
                             gameState.autoUpgradeEnabled = true;
                         }
 
-                        saveGameSave();
-                        updateUI();
+                       if (gameState.autoUpgradeEnabled) {
+    autoUpgradeAll();
+}
+
+saveGameSave();
+updateUI();
                     });
                 }
 
