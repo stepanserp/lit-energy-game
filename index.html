@@ -461,80 +461,36 @@ spawnBar.style.width = gameState.autoSpawnEnabled
 }
 
 function spawnCan() {
-    const emptyIndex = gameState.grid.findIndex(value => value === 0);
+    const emptyIndices = gameState.grid
+        .map((val, i) => val === 0 ? i : -1)
+        .filter(i => i !== -1);
 
-    if (emptyIndex === -1) {
-        gameState.money += BUY_COSTS[gameState.spawnLevel] / 2;
-        updateUI();
+    if (emptyIndices.length === 0) {
+        const level = gameState.spawnLevel;
+        const sellPrice = Math.floor((BUY_COSTS[level] || 100) / 2);
+        gameState.money += sellPrice;
+        showSellNotification(`+ ${sellPrice} 💰`);
         return;
     }
 
-    gameState.grid[emptyIndex] = gameState.spawnLevel;
+    const randomIndex = emptyIndices[
+        Math.floor(Math.random() * emptyIndices.length)
+    ];
+
+    gameState.grid[randomIndex] = gameState.spawnLevel;
+
+    if (!gameState.unlockedLevels.includes(gameState.spawnLevel)) {
+        gameState.unlockedLevels.push(gameState.spawnLevel);
+        renderShop();
+    }
 
     updateGrid();
     recalculateIncome();
-    updateUI();
+
+    const cell = gridEl.children[randomIndex];
+    cell.classList.add('pop');
+    setTimeout(() => cell.classList.remove('pop'), 400);
 }
-
-function setupAutoSpawnToggle() {
-    if (document.getElementById('auto-spawn-toggle')) return;
-
-    const button = document.createElement('button');
-    button.id = 'auto-spawn-toggle';
-
-    button.style.cssText = `
-        display: block;
-        width: 100%;
-        max-width: 260px;
-        margin: 12px auto;
-        padding: 12px;
-        border: 2px solid #00e676;
-        border-radius: 12px;
-        background: #123522;
-        color: white;
-        font-weight: bold;
-        font-size: 15px;
-        cursor: pointer;
-    `;
-
-    function updateButton() {
-        button.textContent = gameState.autoSpawnEnabled
-            ? 'АВТОСПАВН: ON'
-            : 'АВТОСПАВН: OFF';
-
-        button.style.borderColor = gameState.autoSpawnEnabled
-            ? '#00e676'
-            : '#ff5252';
-
-        button.style.background = gameState.autoSpawnEnabled
-            ? '#123522'
-            : '#421b1b';
-    }
-
-    button.addEventListener('click', () => {
-        gameState.autoSpawnEnabled = !gameState.autoSpawnEnabled;
-        updateButton();
-        saveGameSave();
-
-        showNotification(
-            gameState.autoSpawnEnabled
-                ? 'Автоспавн включён'
-                : 'Автоспавн выключен'
-        );
-    });
-
-    const spawnContainer = spawnBar.parentElement;
-    spawnContainer.insertAdjacentElement('afterend', button);
-
-    updateButton();
-}
-{
-        const emptyIndices = gameState.grid.map((val, i) => val === 0 ? i : -1).filter(i => i !== -1);
-        if (emptyIndices.length === 0) { const level = gameState.spawnLevel; const sellPrice = Math.floor((BUY_COSTS[level] || 100) / 2); gameState.money += sellPrice; showSellNotification(`+ ${sellPrice} 💰`); return; }
-        const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)]; gameState.grid[randomIndex] = gameState.spawnLevel;
-        if (!gameState.unlockedLevels.includes(gameState.spawnLevel)) { gameState.unlockedLevels.push(gameState.spawnLevel); renderShop(); }
-        updateGrid(); recalculateIncome(); const cell = gridEl.children[randomIndex]; cell.classList.add('pop'); setTimeout(() => cell.classList.remove('pop'), 400);
-    }
     
     function showSellNotification(text) { const el = document.createElement('div'); el.className = 'sell-notification'; el.textContent = text; sellNotifContainer.appendChild(el); setTimeout(() => { el.classList.add('fade-out'); setTimeout(() => el.remove(), 500); }, 1500); }
     
