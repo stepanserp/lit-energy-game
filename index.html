@@ -178,7 +178,17 @@ gap: 10px;}
     }
 }
         body.device-phone .grid { width: 100%; box-sizing: border-box; grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-rows: repeat(4,auto); gap: 7px; padding: 8px; border-width: 2px; margin-bottom: 7px; }
-        body.device-phone .cell { width: 100%; height: auto; aspect-ratio: .78; min-width: 0; border-radius: 9px; border-width: 1px; touch-action: manipulation; }
+      body.device-phone .cell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: .78;
+    min-width: 0;
+    border-radius: 9px;
+    border-width: 1px;
+    touch-action: none !important;
+    user-select: none;
+    -webkit-user-select: none;
+}
         body.device-phone .spawn-timer-container { height: 17px; margin-bottom: 2px; }
         body.device-phone .side-panel { width: 100%; min-width: 0; max-height: none; gap: 10px; }
         body.device-phone .shop-section { padding: 14px; max-height: none; overflow: visible; }
@@ -632,14 +642,19 @@ function createGrid() {
         cell.draggable = false;
 
         cell.addEventListener('pointerdown', (e) => {
-e.preventDefault();
-cell.setPointerCapture(e.pointerId);
-            if (e.pointerType === 'mouse' && e.button !== 0) return;
-const sourceGrid = getActiveGrid();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-if (!sourceGrid[index] || sourceGrid[index] <= 0) {
-    return;
-}
+    const sourceGrid = getActiveGrid();
+
+    if (!sourceGrid[index] || sourceGrid[index] <= 0) {
+        return;
+    }
+
+    e.preventDefault();
+
+    if (gridEl.setPointerCapture) {
+        gridEl.setPointerCapture(e.pointerId);
+    }
 
             const rect = cell.getBoundingClientRect();
             const ghost = cell.cloneNode(true);
@@ -1789,7 +1804,19 @@ document.querySelectorAll('.shop-item').forEach(el => { const cost = parseInt(el
         cell.style.position = 'relative';
         cell.style.filter = 'none';
         cell.style.background = '';
+// Сбрасываем старое выделение клеток
+cell.style.borderColor = '#333';
+cell.style.boxShadow = 'none';
 
+// Если банка выбрана, оставляем выделенной только её
+if (
+    selectedIndex === index &&
+    selectedPage === currentPage &&
+    activeGrid[index] > 0
+) {
+    cell.style.borderColor = 'var(--accent)';
+    cell.style.boxShadow = 'inset 0 0 15px var(--accent)';
+}
         // Третья страница закрыта до 3 перерождений
         if (currentPage === 3 && gameState.rebirthCount < 3) {
             cell.innerHTML = '🔒';
