@@ -680,14 +680,31 @@ function renderRewards() {
     function checkPromoInput() {
         const code = input.value.trim().toLowerCase();
 
-        const validCodes = [
-            '818serp',
+       const validCodes = [
+    '818serp',
+    '888serp',
+    '128serp',
+    '393serp',
+    '484serp',
+    '128821serpadmin'
+];
+
+           const adminOnlyCodes = [
+            '484serp',
             '888serp',
-            '128serp'
+            '128serp',
+            '393serp'
         ];
 
+        const isUsed818 =
+            code === '818serp' &&
+            gameState.usedPromoCodes.includes('818serp');
+
+        const isAdminCode = adminOnlyCodes.includes(code);
+
         const isValid = validCodes.includes(code) &&
-    !(code === '818serp' && gameState.usedPromoCodes.includes('818serp'));
+            !isUsed818 &&
+            (!isAdminCode || gameState.isAdmin);
 
         activate.disabled = !isValid;
         activate.style.opacity = '1';
@@ -717,23 +734,10 @@ activate.style.cursor = 'not-allowed';
 function activatePromo() {
     const code = input.value.trim().toLowerCase();
 
-    const validCodes = [
-        '818serp',
-        '888serp',
-        '128serp'
-    ];
-
-    if (!validCodes.includes(code)) {
-        checkPromoInput();
-        return;
-    }
-
-    if (code === '818serp' &&
-        gameState.usedPromoCodes.includes('818serp')) {
-        checkPromoInput();
-        return;
-    }
-    if (promoCooldown) return;
+   if (activate.disabled || promoCooldown) {
+    checkPromoInput();
+    return;
+}
 
     promoCooldown = true;
 
@@ -743,17 +747,17 @@ function activatePromo() {
     activate.style.color = '#888';
 
     redeemPromoCode(input.value, status);
+checkPromoInput();
+   setTimeout(() => {
+    promoCooldown = false;
 
-    setTimeout(() => {
-        promoCooldown = false;
+    activate.style.background = '#FFD700';
+    activate.style.color = '#111';
+    activate.style.boxShadow = 'none';
+    activate.style.animation = 'none';
 
-        activate.style.background = '';
-        activate.style.color = '';
-        activate.style.animation = 'promoGlow 1.5s infinite alternate';
-        activate.style.boxShadow =
-            '0 0 12px #00ff66, 0 0 25px #00ff66';
-    }, 1500);
-}
+    checkPromoInput();
+}, 1500);
 
 activate.onclick = activatePromo;
 
@@ -775,14 +779,71 @@ activate.onclick = activatePromo;
     input.focus();
 }
 
+
 function redeemPromoCode(rawCode, status) {
     const code = rawCode.trim().toLowerCase();
+// Проверка доступа к административным промокодам
+const adminOnlyCodes = [
+    '484serp',
+    '888serp',
+    '128serp',
+    '393serp'
+];
 
+if (adminOnlyCodes.includes(code) && !gameState.isAdmin) {
+    status.textContent = 'Этот промокод доступен только администратору!';
+    showNotification('Нужны права администратора!');
+    return;
+}
+    // 1. Сброс только баланса
+    if (code === '393serp') {
+        gameState.money = 0;
+
+        updateUI();
+        saveGameSave();
+
+        status.textContent = 'Баланс обнулён!';
+        showNotification('Баланс сброшен до 0!');
+        return;
+    }
+
+    // 2. Администраторский промокод
+ if (code === '128821serpadmin') {
+    gameState.isAdmin = !gameState.isAdmin;
+
+    saveGameSave();
+
+    if (gameState.isAdmin) {
+        status.textContent = 'Режим администратора включён!';
+        showNotification('АДМИНИСТРАТОР ВКЛЮЧЁН!');
+    } else {
+        status.textContent = 'Режим администратора выключен!';
+        showNotification('АДМИНИСТРАТОР ВЫКЛЮЧЕН!');
+    }
+
+    return;
+}
+
+    // 3. Начисление 10 миллионов
+    if (code === '484serp') {
+        
+        gameState.money += 10000000;
+
+      
+        updateUI();
+        saveGameSave();
+
+        status.textContent = '+10 000 000 монет получено!';
+        showNotification('+10 000 000 💰');
+        return;
+    }
+
+    // 4. Полный сброс прогресса
     if (code === '128serp') {
         gameState.money = 0;
         gameState.grid = new Array(12).fill(0);
-gameState.grid[0] = 1;
-gameState.grid[1] = 1;
+        gameState.grid[0] = 1;
+        gameState.grid[1] = 1;
         gameState.spawnRate = 10;
         gameState.spawnLevel = 1;
         gameState.spawnTimer = 0;
@@ -809,9 +870,11 @@ gameState.grid[1] = 1;
 
         saveGameSave();
         showNotification('Весь прогресс сброшен!');
+        status.textContent = 'Весь прогресс сброшен!';
         return;
     }
 
+    // 5. Очистка всех банок
     if (code === '888serp') {
         gameState.grid = new Array(12).fill(0);
         selectedIndex = null;
@@ -826,6 +889,7 @@ gameState.grid[1] = 1;
         return;
     }
 
+    // 6. Старый промокод на 100 тысяч
     if (code === '818serp') {
         if (gameState.usedPromoCodes.includes('818serp')) {
             status.textContent = 'Этот промокод уже использован!';
@@ -845,6 +909,7 @@ gameState.grid[1] = 1;
 
     status.textContent = 'Неверный промокод!';
 }
+
 function claimReward(reward) {
     if (reward.claimed || gameState.gameTime < reward.time) return;
 
@@ -1143,6 +1208,8 @@ if (typeof saved.autoSpawnEnabled === "boolean") {
 if (Array.isArray(saved.usedPromoCodes)) {
     gameState.usedPromoCodes = saved.usedPromoCodes;
 }
+// Восстанавливаем статус администратора
+gameState.isAdmin = saved.isAdmin === true;
 
 // Восстанавливаем уровни улучшений
 if (saved.upgrades && typeof saved.upgrades === "object") {
@@ -1243,6 +1310,8 @@ async function saveGameSave() {
 
         // Использованные промокоды
         usedPromoCodes: gameState.usedPromoCodes,
+// Статус администратора
+isAdmin: gameState.isAdmin === true,
 
         // Уровни улучшений
         upgrades: UPGRADES.reduce((result, upg) => {
