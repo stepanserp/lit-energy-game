@@ -632,10 +632,14 @@ function createGrid() {
         cell.draggable = false;
 
         cell.addEventListener('pointerdown', (e) => {
+e.preventDefault();
+cell.setPointerCapture(e.pointerId);
             if (e.pointerType === 'mouse' && e.button !== 0) return;
+const sourceGrid = getActiveGrid();
 
-            const sourceGrid = getActiveGrid();
-            if (sourceGrid[index] <= 0) return;
+if (!sourceGrid[index] || sourceGrid[index] <= 0) {
+    return;
+}
 
             const rect = cell.getBoundingClientRect();
             const ghost = cell.cloneNode(true);
