@@ -2207,9 +2207,15 @@ function setupPageNavigation() {
     if (upg.id === 'spawn_speed') {
         gameState.spawnRate = Math.max(1, gameState.spawnRate - 1);
     }
-    else if (upg.id === 'spawn_level') {
-        gameState.spawnLevel = Math.min(12, gameState.spawnLevel + 1);
+   else if (upg.id === 'spawn_level') {
+    gameState.spawnLevel = Math.min(12, gameState.spawnLevel + 1);
+
+    const newLevel = gameState.spawnLevel;
+
+    if (!gameState.unlockedLevels.includes(newLevel)) {
+        gameState.unlockedLevels.push(newLevel);
     }
+}
     else if (upg.id === 'unlock') {
         for (let i = 1; i <= 12; i++) {
             if (!gameState.unlockedLevels.includes(i)) {
@@ -2645,9 +2651,17 @@ document.getElementById('device-start').addEventListener('click', async () => {
     const startButton = document.getElementById('device-start');
     startButton.disabled = true;
 
-    await loadGameSave();
+   await loadGameSave();
 
-    document.body.classList.add(
+// Сразу отображаем загруженный прогресс
+recalculateIncome();
+updateGrid();
+updateUI();
+renderShop();
+updatePageNavigation();
+renderRebirth();
+
+document.body.classList.add(
         'device-' + chosenDevice,
         'game-started'
     );
