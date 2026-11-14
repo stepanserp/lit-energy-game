@@ -607,6 +607,12 @@ setupAutoSpawnToggle();
     
 
 function setupAutoSpawnToggle() {
+    const oldButton = document.getElementById('auto-spawn-toggle');
+    if (oldButton) oldButton.remove();
+
+    const oldBottomBar = document.getElementById('mobile-bottom-bar');
+    if (oldBottomBar) oldBottomBar.remove();
+
     const button = document.createElement('button');
 
     button.id = 'auto-spawn-toggle';
@@ -2619,6 +2625,7 @@ function scheduleSave() {
 
 
 document.getElementById('device-start').addEventListener('click', async () => {
+    const startButton = document.getElementById('device-start').addEventListener('click', async () => {
     const startButton = document.getElementById('device-start');
     startButton.disabled = true;
 
@@ -2632,32 +2639,16 @@ document.getElementById('device-start').addEventListener('click', async () => {
     deviceGate.remove();
 
     gameState.lastTime = performance.now();
-    });
-
-    window.addEventListener('scroll', () => {
-        const maxScroll =
-            document.documentElement.scrollHeight - window.innerHeight;
-
-        if (maxScroll <= 0) {
-            pageScrollSlider.value = 0;
-            return;
-        }
-
-        pageScrollSlider.value = Math.round(
-            (window.scrollY / maxScroll) * 1000
-        );
-    }, { passive: true });
-}
-    init();
 });
 
+init();
+});
 
 if (window.Telegram?.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
     console.log("Telegram WebApp initialized");
 }
-
 selectDevice(chosenDevice);
 
 </script>
