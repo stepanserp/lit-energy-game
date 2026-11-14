@@ -430,13 +430,28 @@ body.device-phone .mobile-page-nav button:active {
             <div class="trash-section" id="trash"><div class="trash-icon">🗑️</div><div>Удалить банку</div></div>
         </div>
     </div>
-    <!-- Быстрая прокрутка страницы на телефоне -->
-    <div class="mobile-page-nav" id="mobile-page-nav">
-        <button id="scroll-top" type="button" aria-label="Вверх">▲</button>
-        <div class="mobile-page-nav-line"></div>
-        <button id="scroll-bottom" type="button" aria-label="Вниз">▼</button>
-    </div>
-
+<!-- Ползунок прокрутки страницы -->
+<div class="mobile-page-nav" id="mobile-page-nav">
+    <input
+        type="range"
+        id="page-scroll-slider"
+        min="0"
+        max="1000"
+        value="0"
+        aria-label="Прокрутка экрана"
+        style="
+            writing-mode: vertical-lr;
+            direction: rtl;
+            width: 32px;
+            height: 150px;
+            margin: 0;
+            padding: 0;
+            accent-color: #28a745;
+            cursor: pointer;
+            touch-action: none;
+        "
+    >
+</div>
     <div class="notification" id="notification"></div>
     <div class="modal-overlay" id="rewards-modal">
         <div class="modal-content">
@@ -763,12 +778,40 @@ function setupAutoSpawnToggle() {
             }
 
             if (index === 2) {
-                control.textContent = '🗑️';
-                control.setAttribute('aria-label', 'Мусорка');
-            }
-        });
+    control.textContent = '🗑️';
+    control.setAttribute('aria-label', 'Мусорка');
+}
 
-       spawnBar.parentElement.insertAdjacentElement('afterend', bottomBar);
+const styles = {
+    width: '100%',
+    height: '54px',
+    minHeight: '54px',
+    maxHeight: '54px',
+    minWidth: '0',
+    maxWidth: 'none',
+    margin: '0',
+    padding: '4px',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '12px',
+    fontSize: '22px',
+    lineHeight: '1'
+};
+
+Object.entries(styles).forEach(([property, value]) => {
+    control.style.setProperty(
+        property.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase()),
+        value,
+        'important'
+    );
+});
+
+}); // Закрываем controls.forEach
+
+spawnBar.parentElement.insertAdjacentElement('afterend', bottomBar);
 document.body.style.paddingBottom = '0';
 
     } else {
@@ -2649,20 +2692,37 @@ document.getElementById('device-start').addEventListener('click', async () => {
     deviceGate.remove();
 
     gameState.lastTime = performance.now();
-// Быстрая прокрутка страницы на телефоне
-document.getElementById('scroll-top').addEventListener('click', () => {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
-});
+// Ползунок прокрутки страницы
+const pageScrollSlider = document.getElementById('page-scroll-slider');
 
-document.getElementById('scroll-bottom').addEventListener('click', () => {
-    window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: 'smooth'
+if (pageScrollSlider) {
+    pageScrollSlider.addEventListener('input', () => {
+        const maxScroll =
+            document.documentElement.scrollHeight - window.innerHeight;
+
+        const scrollPosition =
+            (Number(pageScrollSlider.value) / 1000) * maxScroll;
+
+        window.scrollTo({
+            top: scrollPosition,
+            behavior: 'auto'
+        });
     });
-});
+
+    window.addEventListener('scroll', () => {
+        const maxScroll =
+            document.documentElement.scrollHeight - window.innerHeight;
+
+        if (maxScroll <= 0) {
+            pageScrollSlider.value = 0;
+            return;
+        }
+
+        pageScrollSlider.value = Math.round(
+            (window.scrollY / maxScroll) * 1000
+        );
+    }, { passive: true });
+}
     init();
 });
 
