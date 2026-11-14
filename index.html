@@ -615,7 +615,8 @@ if (rebirthButton) {
 
     updateButton();
 }
-   function createGrid() {
+  
+function createGrid() {
     gridEl.innerHTML = '';
 
     for (let index = 0; index < 12; index++) {
@@ -628,16 +629,32 @@ if (rebirthButton) {
             handleCellClick(index);
         });
 
-        // Отключаем старое HTML-перетаскивание
         cell.draggable = false;
 
-        // Начало перетаскивания мышкой или пальцем
         cell.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
 
             const sourceGrid = getActiveGrid();
-
             if (sourceGrid[index] <= 0) return;
+
+            const rect = cell.getBoundingClientRect();
+            const ghost = cell.cloneNode(true);
+
+            ghost.style.cssText = `
+                position: fixed;
+                left: ${e.clientX}px;
+                top: ${e.clientY}px;
+                width: ${rect.width}px;
+                height: ${rect.height}px;
+                transform: translate(-50%, -50%) scale(1.08);
+                opacity: 0;
+                pointer-events: none;
+                z-index: 999999;
+                filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));
+                transition: none;
+            `;
+
+            document.body.appendChild(ghost);
 
             pointerDrag = {
                 index,
@@ -645,18 +662,43 @@ if (rebirthButton) {
                 pointerId: e.pointerId,
                 startX: e.clientX,
                 startY: e.clientY,
-                moved: false
+                moved: false,
+                ghost,
+                edgeDirection: null,
+                edgeTimer: null
             };
-
-            dragLastEdge = null;
         });
 
         gridEl.appendChild(cell);
     }
 
-    // Общая обработка движения указателя
     if (!window.scooterPointerDragInstalled) {
         window.scooterPointerDragInstalled = true;
+
+        // Переключение страниц с повторением,
+        // пока банка удерживается у края
+        function switchAtEdge() {
+            if (!pointerDrag || !pointerDrag.edgeDirection) return;
+
+            const nextPage = pointerDrag.edgeDirection === 'left'
+                ? currentPage - 1
+                : currentPage + 1;
+
+            if (nextPage < 1 || nextPage > TOTAL_PAGES) return;
+
+            if (nextPage === 3 && gameState.rebirthCount < 3) {
+                return;
+            }
+
+            currentPage = nextPage;
+
+            updateGrid();
+            updatePageNavigation();
+
+            saveGameSave();
+
+            pointerDrag.edgeTimer = setTimeout(switchAtEdge, 700);
+        }
 
         document.addEventListener('pointermove', (e) => {
             if (!pointerDrag || e.pointerId !== pointerDrag.pointerId) return;
@@ -672,7 +714,14 @@ if (rebirthButton) {
 
             e.preventDefault();
 
-            const edgeSize = 30;
+            // Двигаем визуальную копию банки
+            if (pointerDrag.ghost) {
+                pointerDrag.ghost.style.opacity = '0.9';
+                pointerDrag.ghost.style.left = e.clientX + 'px';
+                pointerDrag.ghost.style.top = e.clientY + 'px';
+            }
+
+            const edgeSize = 45;
             let direction = null;
 
             if (e.clientX <= edgeSize) {
@@ -682,33 +731,22 @@ if (rebirthButton) {
             }
 
             if (!direction) {
-                dragLastEdge = null;
+                if (pointerDrag.edgeTimer) {
+                    clearTimeout(pointerDrag.edgeTimer);
+                    pointerDrag.edgeTimer = null;
+                }
+
+                pointerDrag.edgeDirection = null;
                 return;
             }
 
-            if (dragLastEdge === null) {
-                dragLastEdge = direction;
+            if (pointerDrag.edgeDirection !== direction) {
+                if (pointerDrag.edgeTimer) {
+                    clearTimeout(pointerDrag.edgeTimer);
+                }
 
-                setTimeout(() => {
-                    if (!pointerDrag || dragLastEdge !== direction) return;
-
-                    const nextPage = direction === 'left'
-                        ? currentPage - 1
-                        : currentPage + 1;
-
-                    if (nextPage < 1 || nextPage > TOTAL_PAGES) return;
-
-                    if (nextPage === 3 && gameState.rebirthCount < 3) {
-                        return;
-                    }
-currentPage = nextPage;
-updateGrid();
-updatePageNavigation();
-
-// Разрешаем переключить ещё одну страницу,
-// если продолжаем держать банку у края
-dragLastEdge = null;
-                }, 600);
+                pointerDrag.edgeDirection = direction;
+                pointerDrag.edgeTimer = setTimeout(switchAtEdge, 700);
             }
         }, { passive: false });
 
@@ -717,8 +755,16 @@ dragLastEdge = null;
             if (!pointerDrag || e.pointerId !== pointerDrag.pointerId) return;
 
             const drag = pointerDrag;
+
+            if (drag.edgeTimer) {
+                clearTimeout(drag.edgeTimer);
+            }
+
+            if (drag.ghost) {
+                drag.ghost.remove();
+            }
+
             pointerDrag = null;
-            dragLastEdge = null;
 
             if (!drag.moved) return;
 
@@ -736,19 +782,9 @@ dragLastEdge = null;
             const targetIndex = Number(targetCell.dataset.index);
             const targetPage = currentPage;
 
-            if (
-                targetPage === 2 &&
-                targetIndex >= extraSlots
-            ) {
-                return;
-            }
+            if (targetPage === 2 && targetIndex >= extraSlots) return;
 
-            if (
-                targetPage === 3 &&
-                gameState.rebirthCount < 3
-            ) {
-                return;
-            }
+            if (targetPage === 3 && gameState.rebirthCount < 3) return;
 
             const sourceGrid = drag.page === 1
                 ? gameState.grid
@@ -763,17 +799,11 @@ dragLastEdge = null;
 
             if (sourceValue <= 0) return;
 
-            if (
-                drag.page === targetPage &&
-                drag.index === targetIndex
-            ) {
+            if (drag.page === targetPage && drag.index === targetIndex) {
                 return;
             }
 
-            if (
-                sourceValue === targetValue &&
-                sourceValue < 12
-            ) {
+            if (sourceValue === targetValue && sourceValue < 12) {
                 mergeCells(
                     drag.index,
                     targetIndex,
@@ -790,8 +820,25 @@ dragLastEdge = null;
                 );
             }
         });
+
+        // Если браузер отменил перетаскивание
+        document.addEventListener('pointercancel', (e) => {
+            if (!pointerDrag || e.pointerId !== pointerDrag.pointerId) return;
+
+            if (pointerDrag.edgeTimer) {
+                clearTimeout(pointerDrag.edgeTimer);
+            }
+
+            if (pointerDrag.ghost) {
+                pointerDrag.ghost.remove();
+            }
+
+            pointerDrag = null;
+            dragLastEdge = null;
+        });
     }
 }
+
    let selectedIndex = null;
 // Состояние перетаскивания банок
 let pointerDrag = null;
