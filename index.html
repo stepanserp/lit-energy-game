@@ -1100,6 +1100,87 @@ function buyExtraSlot() {
     );
 }
 
+function updateGrid() {
+    const grid = getActiveGrid();
+
+    for (let index = 0; index < 12; index++) {
+        const cell = gridEl.children[index];
+
+        if (!cell) continue;
+
+        const level = grid[index];
+
+        // Сбрасываем содержимое ячейки
+        cell.innerHTML = '';
+        cell.style.borderColor = '#333';
+        cell.style.boxShadow = 'none';
+        cell.style.backgroundColor = '#1a1a1a';
+
+        // Проверяем заблокированные слоты
+        const lockedPage2 =
+            currentPage === 2 && index >= extraSlots;
+
+        const lockedPage3 =
+            currentPage === 3 && gameState.rebirthCount < 3;
+
+        if (lockedPage2 || lockedPage3) {
+            cell.innerHTML = `
+                <div style="
+                    display:flex;
+                    flex-direction:column;
+                    align-items:center;
+                    justify-content:center;
+                    color:#888;
+                    text-align:center;
+                    font-size:12px;
+                    gap:6px;
+                ">
+                    <span style="font-size:25px;">🔒</span>
+                    <span>${lockedPage2 ? 'Открыть слот' : '3 перерождения'}</span>
+                </div>
+            `;
+            continue;
+        }
+
+        // Если в ячейке есть банка
+        if (level > 0 && level < CAN_IMAGES.length) {
+            const img = document.createElement('img');
+            img.src = CAN_IMAGES[level];
+            img.alt = NAMES[level];
+            img.draggable = false;
+
+            cell.appendChild(img);
+
+            const label = document.createElement('div');
+            label.textContent = NAMES[level];
+
+            label.style.cssText = `
+                position:absolute;
+                bottom:3px;
+                left:2px;
+                right:2px;
+                padding:3px 1px;
+                background:rgba(0,0,0,0.8);
+                color:#fff;
+                font-size:10px;
+                font-weight:bold;
+                text-align:center;
+                border-radius:4px;
+                pointer-events:none;
+            `;
+
+            cell.appendChild(label);
+        }
+
+        // Восстанавливаем подсветку выбранной банки
+        if (
+            selectedIndex === index &&
+            selectedPage === currentPage
+        ) {
+            highlightCell(index, true);
+        }
+    }
+}
 function handleCellClick(index) {
     // Проверяем доступность слота
     if (currentPage === 2 && index >= extraSlots) {
@@ -2065,9 +2146,6 @@ addMoney(100000);
         showNotification('+100 000 💰');
         return;
     }
-
-    status.textContent = 'Неверный промокод!';
-}
 // Бесконечный автоапгрейд
 if (code === 'autoupserp1') {
     gameState.autoUpgradeInfinite = !gameState.autoUpgradeInfinite;
@@ -2085,6 +2163,8 @@ if (code === 'autoupserp1') {
     updateUI();
     saveGameSave();
     return;
+}
+    status.textContent = 'Неверный промокод!';
 }
 
 function claimReward(reward) {
