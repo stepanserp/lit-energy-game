@@ -1301,6 +1301,46 @@
             cursor: pointer;
             touch-action: none;
         }
+/* Настройка верхней панели */
+.top-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Кнопка магазина — справа вверху */
+#open-shop {
+    order: 2;
+    margin-left: auto;
+    width: auto;
+    min-height: 38px;
+}
+
+/* Доход и автоапгрейд */
+.stats {
+    order: 1;
+}
+
+/* Отдельная строка автоапгрейда под доходом */
+#auto-upgrade-container {
+    order: 3;
+    flex: 0 0 100%;
+    width: 100%;
+    min-height: 30px !important;
+    margin-top: 3px !important;
+    justify-content: flex-start;
+}
+
+/* Компактная кнопка автоапгрейда */
+#auto-upgrade-container button {
+    display: inline-flex !important;
+    width: auto !important;
+    min-height: 28px !important;
+    padding: 4px 10px !important;
+    margin: 0 !important;
+    font-size: 12px !important;
+    line-height: 1.2;
+}
     </style>
 </head>
 
@@ -1585,11 +1625,13 @@
             document.getElementById('rebirth-cancel-button').addEventListener('click', () => {
                 document.getElementById('rebirth-confirm').style.display = 'none';
             });
-            document.getElementById('rebirth-confirm-button').addEventListener('click', () => {
-                document.getElementById('rebirth-confirm').style.display = 'none';
+           document.getElementById('rebirth-confirm-button').addEventListener('click', () => {
+    document.getElementById('rebirth-confirm').style.display = 'none';
 
-                renderRebirth();
-            });
+    performRebirth();
+
+    renderRebirth();
+});
         }
 
         function init() {
@@ -3364,6 +3406,10 @@ if (autoUpgradeContainer) {
                         }
 
                        if (gameState.autoUpgradeEnabled) {
+    autoUpgradeAll();
+}
+
+if (gameState.autoUpgradeEnabled) {
     autoUpgradeAll();
 }
 
