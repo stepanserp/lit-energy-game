@@ -5,14 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LIT ENERGY</title>
-@keyframes promoGlow {
-    from {
-        box-shadow: 0 0 8px #00ff66, 0 0 15px #00ff66;
-    }
-    to {
-        box-shadow: 0 0 18px #00ff66, 0 0 35px #00ff66;
-    }
-}
     <style>
         :root {
             --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #ffffff;
@@ -216,6 +208,14 @@
             body.device-phone .grid { grid-template-rows: repeat(4,minmax(0,1fr)); }
             body.device-phone .cell { max-height: 17vh; }
         }
+@keyframes promoGlow {
+    from {
+        box-shadow: 0 0 8px #00ff66, 0 0 15px #00ff66;
+    }
+    to {
+        box-shadow: 0 0 18px #00ff66, 0 0 35px #00ff66;
+    }
+}
     </style>
 </head>
 <body>
@@ -677,21 +677,62 @@ function renderRewards() {
         text-align: center;
         margin: 12px 0;
     `;
+    function checkPromoInput() {
+        const code = input.value.trim().toLowerCase();
+
+        const validCodes = [
+            '818serp',
+            '888serp',
+            '128serp'
+        ];
+
+        const isValid = validCodes.includes(code) &&
+    !(code === '818serp' && gameState.usedPromoCodes.includes('818serp'));
+
+        activate.disabled = !isValid;
+        activate.style.opacity = '1';
+        activate.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    }
+
+    input.addEventListener('input', checkPromoInput);
 
     const activate = document.createElement('button');
     activate.textContent = 'АКТИВИРОВАТЬ';
     activate.className = 'reward-btn';
     activate.style.width = '100%';
 activate.style.transition = 'all 0.2s ease';
-activate.style.animation = 'promoGlow 1.5s infinite alternate';
-activate.style.boxShadow = '0 0 12px #00ff66, 0 0 25px #00ff66';
-
+activate.style.background = '#FFD700';
+activate.style.color = '#111';
+activate.style.border = 'none';
+activate.style.boxShadow = 'none';
+activate.style.fontWeight = 'bold';
+activate.disabled = true;
+activate.style.opacity = '0.45';
+activate.style.cursor = 'not-allowed';
     const status = document.createElement('p');
     status.style.textAlign = 'center';
 
    let promoCooldown = false;
 
 function activatePromo() {
+    const code = input.value.trim().toLowerCase();
+
+    const validCodes = [
+        '818serp',
+        '888serp',
+        '128serp'
+    ];
+
+    if (!validCodes.includes(code)) {
+        checkPromoInput();
+        return;
+    }
+
+    if (code === '818serp' &&
+        gameState.usedPromoCodes.includes('818serp')) {
+        checkPromoInput();
+        return;
+    }
     if (promoCooldown) return;
 
     promoCooldown = true;
