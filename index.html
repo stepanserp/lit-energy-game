@@ -591,7 +591,6 @@ function init() {
     setupRewardsUI();
 setupRebirthUI();
 setupPageNavigation();
-setupAutoSpawnToggle();
 
     if (!window.hasLoadedSave) {
         gameState.grid[5] = 1;
@@ -1330,22 +1329,40 @@ function setupTrash() {
         }
     });
 }
-    function setupMobileShop() {
-        const open = document.getElementById('open-shop');
-        const modal = document.getElementById('shop-modal');
-        const close = document.getElementById('close-shop');
-        const host = document.getElementById('mobile-shop-host');
-        const section = document.querySelector('.side-panel .shop-section');
-        if (!open || !modal || !close || !host || !section) return;
-       if (document.body.classList.contains('device-phone')) {
-    host.appendChild(section);
-    open.style.display = 'inline-flex';
-}
-        open.addEventListener('click', () => modal.classList.add('active'));
-        close.addEventListener('click', () => modal.classList.remove('active'));
-        modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+function setupMobileShop() {
+    const open = document.getElementById('open-shop');
+    const modal = document.getElementById('shop-modal');
+    const close = document.getElementById('close-shop');
+    const host = document.getElementById('mobile-shop-host');
+    const section = document.querySelector('.side-panel .shop-section');
+
+    if (!open || !modal || !close || !host || !section) return;
+
+    // Переносим магазин в мобильное окно после выбора телефона
+    if (document.body.classList.contains('device-phone')) {
+        host.appendChild(section);
+        open.style.display = 'inline-flex';
     }
-    
+
+    // Не создаём повторные обработчики при повторном вызове
+    if (open.dataset.eventsReady === 'true') return;
+
+    open.dataset.eventsReady = 'true';
+
+    open.addEventListener('click', () => {
+        modal.classList.add('active');
+    });
+
+    close.addEventListener('click', () => {
+        modal.classList.remove('active');
+    });
+
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+}
     function getIncome(level) {
     return level === 0
         ? 0
@@ -2625,7 +2642,6 @@ function scheduleSave() {
 
 
 document.getElementById('device-start').addEventListener('click', async () => {
-    const startButton = document.getElementById('device-start').addEventListener('click', async () => {
     const startButton = document.getElementById('device-start');
     startButton.disabled = true;
 
@@ -2636,13 +2652,15 @@ document.getElementById('device-start').addEventListener('click', async () => {
         'game-started'
     );
 
+    setupAutoSpawnToggle();
+    setupMobileShop();
+
     deviceGate.remove();
 
     gameState.lastTime = performance.now();
 });
 
 init();
-});
 
 if (window.Telegram?.WebApp) {
     window.Telegram.WebApp.ready();
