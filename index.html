@@ -1977,8 +1977,12 @@
 
                             updateGrid();
                             recalculateIncome();
-                            updateUI();
-                            saveGameSave();
+                    if (gameState.autoUpgradeEnabled) {
+                            autoUpgradeAll();
+                        }
+
+                        saveGameSave();
+                        updateUI();
 
                             showNotification(`Удалена: ${NAMES[level]}`);
                         }
