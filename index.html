@@ -1328,18 +1328,27 @@
     <div class="game-container">
         <div class="board-section">
             <div class="sell-notification-container" id="sell-notifications"></div>
-            <div class="top-bar">
-                <div class="stats">
-                    💰 <span id="money">0</span>
-                    <div id="income-per-second"
-                        style="font-size:14px; color:#fff; font-style:normal; letter-spacing:0; margin-top:4px;">
-                        +0 / сек
-                    </div>
-                </div>
-                <button class="mobile-shop-btn" id="open-shop" type="button">🛒 Магазин</button>
+          <div class="top-bar">
+    <div class="stats">
+        💰 <span id="money">0</span>
+        <div id="income-per-second"
+            style="font-size:14px; color:#fff; font-style:normal; letter-spacing:0; margin-top:4px;">
+            +0 / сек
+        </div>
+    </div>
 
-                <button class="rewards-btn" id="open-rebirth">♻️ Перерождение</button>
-            </div>
+   <div id="auto-upgrade-container" style="
+    width:100%;
+    min-height:42px;
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+">
+</div>
+
+    <button class="mobile-shop-btn" id="open-shop" type="button">🛒 Магазин</button>
+    <button class="rewards-btn" id="open-rebirth">♻️ Перерождение</button>
+</div>
             <div id="page-navigation" style="
     width:100%;
     display:flex;
@@ -2642,6 +2651,67 @@
                 level++;
             }
         }
+function autoUpgradeAll() {
+    const isActive =
+        gameState.autoUpgradeEnabled === true &&
+        (
+            gameState.autoUpgradeInfinite === true ||
+            gameState.autoUpgradeUntil > Date.now()
+        );
+
+    if (!isActive) return false;
+
+    let merged = false;
+
+    // Проверяем первую и вторую страницы
+    const grids = [
+        { grid: gameState.grid, page: 1, limit: 12 },
+        { grid: pageGrids[1], page: 2, limit: extraSlots }
+    ];
+
+    let somethingChanged = true;
+
+    while (somethingChanged) {
+        somethingChanged = false;
+
+        for (const source of grids) {
+            for (let level = 1; level < 12; level++) {
+                const indices = [];
+
+                for (let i = 0; i < source.limit; i++) {
+                    if (source.grid[i] === level) {
+                        indices.push(i);
+                    }
+                }
+
+                if (indices.length >= 2) {
+                    mergeCells(
+                        indices[0],
+                        indices[1],
+                        level,
+                        source.page,
+                        source.page
+                    );
+
+                    somethingChanged = true;
+                    merged = true;
+                    break;
+                }
+            }
+
+            if (somethingChanged) break;
+        }
+    }
+
+    if (merged) {
+        updateGrid();
+        recalculateIncome();
+        updateUI();
+        saveGameSave();
+    }
+
+    return merged;
+}
         function spawnCan() {
             // Сначала ищем свободные слоты на первой странице
             let emptySlots = gameState.grid
@@ -3241,9 +3311,11 @@
                     button.id = 'auto-upgrade-toggle';
 
                     button.style.cssText = `
-                display: block;
-                width: 100%;
-                margin-top: 8px;
+              display: block;
+width: 100%;
+min-height: 38px;
+margin-top: 0;
+box-sizing: border-box;
                 padding: 10px;
                 border: none;
                 border-radius: 10px;
@@ -3252,7 +3324,12 @@
                 cursor: pointer;
             `;
 
-                    incomeEl.insertAdjacentElement('afterend', button);
+                    const autoUpgradeContainer =
+    document.getElementById('auto-upgrade-container');
+
+if (autoUpgradeContainer) {
+    autoUpgradeContainer.appendChild(button);
+}
 
                     button.addEventListener('click', () => {
                         if (gameState.autoUpgradeInfinite) {
@@ -3342,10 +3419,11 @@
                     } else {
                         el.classList.add('disabled');
                     }
-                });
-            }
-}
-            function updatePageNavigation() {
+                          });
+        }
+        }
+
+        function updatePageNavigation() {
                 const prev = document.getElementById('prev-page');
                 const next = document.getElementById('next-page');
 
