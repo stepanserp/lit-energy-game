@@ -460,7 +460,22 @@ spawnBar.style.width = gameState.autoSpawnEnabled
     requestAnimationFrame(gameLoop);
 }
 
-function spawnCan() 
+function spawnCan() {
+    const emptyIndex = gameState.grid.findIndex(value => value === 0);
+
+    if (emptyIndex === -1) {
+        gameState.money += BUY_COSTS[gameState.spawnLevel] / 2;
+        updateUI();
+        return;
+    }
+
+    gameState.grid[emptyIndex] = gameState.spawnLevel;
+
+    updateGrid();
+    recalculateIncome();
+    updateUI();
+}
+
 function setupAutoSpawnToggle() {
     if (document.getElementById('auto-spawn-toggle')) return;
 
