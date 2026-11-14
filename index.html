@@ -1437,7 +1437,67 @@ spawnBar.style.width = gameState.autoSpawnEnabled
     updateUI();
     requestAnimationFrame(gameLoop);
 }
+function tryAutoMergeFullGrid(incomingLevel) {
+    if (incomingLevel < 1 || incomingLevel >= 12) {
+        return false;
+    }
 
+    const slots = [
+        ...gameState.grid.map((level, index) => ({
+            grid: gameState.grid,
+            index,
+            level
+        })),
+
+        ...pageGrids[1]
+            .slice(0, extraSlots)
+            .map((level, index) => ({
+                grid: pageGrids[1],
+                index,
+                level
+            }))
+    ];
+
+    // Все доступные ячейки должны быть заполнены
+    if (slots.length === 0 || slots.some(slot => slot.level === 0)) {
+        return false;
+    }
+
+    // Ищем банки входящего уровня
+    const targetSlots = slots.filter(
+        slot => slot.level === incomingLevel
+    );
+
+    // Должна быть ровно одна такая банка
+    if (targetSlots.length !== 1) {
+        return false;
+    }
+
+    // Все остальные банки должны быть на один уровень выше
+    const otherSlots = slots.filter(
+        slot => slot.level !== incomingLevel
+    );
+
+    if (otherSlots.some(
+        slot => slot.level !== incomingLevel + 1
+    )) {
+        return false;
+    }
+
+    // Объединяем две банки в одну следующего уровня
+    const target = targetSlots[0];
+    target.grid[target.index] = incomingLevel + 1;
+
+    updateGrid();
+    recalculateIncome();
+    updateUI();
+
+    showNotification(
+        `АВТООБЪЕДИНЕНИЕ! УРОВЕНЬ ${incomingLevel + 1} 🏆`
+    );
+
+    return true;
+}
 function spawnCan() {
     // Сначала ищем свободные слоты на первой странице
     let emptySlots = gameState.grid
@@ -1459,18 +1519,24 @@ function spawnCan() {
             .filter(slot => slot.grid[slot.index] === 0);
     }
 
-    // Если свободных мест больше нет — продаём банку
-    if (emptySlots.length === 0) {
-        const level = gameState.spawnLevel;
-        const sellPrice = Math.floor(
-            (BUY_COSTS[level] || 100) / 2
-        );
+   // Если мест нет — сначала пробуем специальное автообъединение
+if (emptySlots.length === 0) {
+    const level = gameState.spawnLevel;
 
-        addMoney(sellPrice);
-        showSellNotification(`+ ${sellPrice} 💰`);
-        updateUI();
+    if (tryAutoMergeFullGrid(level)) {
+        saveGameSave();
         return;
     }
+
+    const sellPrice = Math.floor(
+        (BUY_COSTS[level] || 100) / 2
+    );
+
+    addMoney(sellPrice);
+    showSellNotification(`+ ${sellPrice} 💰`);
+    updateUI();
+    return;
+}
 
     // Выбираем случайное свободное место
     const randomSlot = emptySlots[
@@ -2290,6 +2356,7 @@ function buyCan(level, cost) {
         }
     }
 
+
     // Если первая страница заполнена — ищем место на второй
     if (availableIndices.length === 0) {
         targetGrid = pageGrids[1];
@@ -2301,10 +2368,18 @@ function buyCan(level, cost) {
         }
     }
 
-    if (availableIndices.length === 0) {
-        showNotification('Нет свободного места на первых двух страницах!');
+   if (availableIndices.length === 0) {
+    if (tryAutoMergeFullGrid(level)) {
+        gameState.money -= cost;
+        updateUI();
+        saveGameSave();
+        showNotification('Банка куплена и объединена! 🏆');
         return;
     }
+
+    showNotification('Нет свободного места на первых двух страницах!');
+    return;
+}
 
     gameState.money -= cost;
 
