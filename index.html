@@ -322,6 +322,48 @@ setupAutoSpawnToggle();
     requestAnimationFrame(gameLoop);
 }
     
+function setupAutoSpawnToggle() {
+    const button = document.createElement('button');
+
+    button.id = 'auto-spawn-toggle';
+    button.style.display = 'block';
+    button.style.width = '100%';
+    button.style.padding = '12px';
+    button.style.marginTop = '10px';
+    button.style.borderRadius = '10px';
+    button.style.border = 'none';
+    button.style.fontWeight = 'bold';
+    button.style.cursor = 'pointer';
+
+    function updateButton() {
+        button.textContent = gameState.autoSpawnEnabled
+            ? 'АВТОСПАВН: ВКЛ'
+            : 'АВТОСПАВН: ВЫКЛ';
+
+        button.style.background = gameState.autoSpawnEnabled
+            ? '#28a745'
+            : '#777';
+
+        button.style.color = '#fff';
+    }
+
+    button.addEventListener('click', () => {
+        gameState.autoSpawnEnabled = !gameState.autoSpawnEnabled;
+
+        updateButton();
+        saveGameSave();
+
+        showNotification(
+            gameState.autoSpawnEnabled
+                ? 'Автоспавн включён'
+                : 'Автоспавн выключен'
+        );
+    });
+
+    spawnBar.parentElement.insertAdjacentElement('afterend', button);
+
+    updateButton();
+}
     function createGrid() {
         gridEl.innerHTML = '';
         gameState.grid.forEach((val, index) => {
@@ -533,8 +575,6 @@ function spawnCan() {
         rewardsModal.addEventListener('click', (e) => { if (e.target === rewardsModal) rewardsModal.classList.remove('active'); }); 
     }
     
-    function renderRewards() {
-      
 function renderRewards() {
     rewardsListEl.innerHTML = '';
 
