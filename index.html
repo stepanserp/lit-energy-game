@@ -327,12 +327,48 @@ body.device-phone .mobile-page-nav {
     transform: scale(0.9);
 }
 
+/* Минималистичные стрелки прокрутки */
+.mobile-page-nav {
+    display: none;
+}
+
+body.device-phone .mobile-page-nav {
+    position: fixed;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+body.device-phone .mobile-page-nav button {
+    width: 24px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+body.device-phone .mobile-page-nav button:active {
+    transform: scale(0.85);
+}
+
 .mobile-page-nav-line {
-    width: 3px;
-    height: 45px;
-    border-radius: 5px;
-    background: var(--accent);
-    opacity: 0.5;
+    display: none;
 }
     </style>
 </head>
