@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LIT ENERGY</title>
+@keyframes promoGlow {
+    from {
+        box-shadow: 0 0 8px #00ff66, 0 0 15px #00ff66;
+    }
+    to {
+        box-shadow: 0 0 18px #00ff66, 0 0 35px #00ff66;
+    }
+}
     <style>
         :root {
             --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #ffffff;
@@ -336,16 +344,20 @@ function setupAutoSpawnToggle() {
     button.style.cursor = 'pointer';
 
     function updateButton() {
-        button.textContent = gameState.autoSpawnEnabled
-            ? 'АВТОСПАВН: ВКЛ'
-            : 'АВТОСПАВН: ВЫКЛ';
+    button.textContent = gameState.autoSpawnEnabled
+        ? 'АВТОСПАВН: ВКЛ'
+        : 'АВТОСПАВН: ВЫКЛ';
 
-        button.style.background = gameState.autoSpawnEnabled
-            ? '#28a745'
-            : '#777';
+    button.style.background = gameState.autoSpawnEnabled
+        ? '#28a745'
+        : '#777';
 
-        button.style.color = '#fff';
-    }
+    button.style.color = '#fff';
+
+    // Скрываем или показываем полосу автоспавна
+    spawnBar.parentElement.style.display =
+        gameState.autoSpawnEnabled ? '' : 'none';
+}
 
     button.addEventListener('click', () => {
         gameState.autoSpawnEnabled = !gameState.autoSpawnEnabled;
@@ -670,19 +682,45 @@ function renderRewards() {
     activate.textContent = 'АКТИВИРОВАТЬ';
     activate.className = 'reward-btn';
     activate.style.width = '100%';
+activate.style.transition = 'all 0.2s ease';
+activate.style.animation = 'promoGlow 1.5s infinite alternate';
+activate.style.boxShadow = '0 0 12px #00ff66, 0 0 25px #00ff66';
 
     const status = document.createElement('p');
     status.style.textAlign = 'center';
 
-    activate.onclick = () => {
-        redeemPromoCode(input.value, status);
-    };
+   let promoCooldown = false;
 
-    input.addEventListener('keydown', event => {
-        if (event.key === 'Enter') {
-            redeemPromoCode(input.value, status);
-        }
-    });
+function activatePromo() {
+    if (promoCooldown) return;
+
+    promoCooldown = true;
+
+    activate.style.animation = 'none';
+    activate.style.background = '#333';
+    activate.style.boxShadow = 'none';
+    activate.style.color = '#888';
+
+    redeemPromoCode(input.value, status);
+
+    setTimeout(() => {
+        promoCooldown = false;
+
+        activate.style.background = '';
+        activate.style.color = '';
+        activate.style.animation = 'promoGlow 1.5s infinite alternate';
+        activate.style.boxShadow =
+            '0 0 12px #00ff66, 0 0 25px #00ff66';
+    }, 1500);
+}
+
+activate.onclick = activatePromo;
+
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        activatePromo();
+    }
+});
 
     rewardsListEl.append(
         backButton,
@@ -702,6 +740,8 @@ function redeemPromoCode(rawCode, status) {
     if (code === '128serp') {
         gameState.money = 0;
         gameState.grid = new Array(12).fill(0);
+gameState.grid[0] = 1;
+gameState.grid[1] = 1;
         gameState.spawnRate = 10;
         gameState.spawnLevel = 1;
         gameState.spawnTimer = 0;
