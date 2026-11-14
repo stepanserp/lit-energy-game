@@ -496,9 +496,28 @@ let pageGrids = [
     new Array(12).fill(0)
 ];
     
-    let gameState = { money: 0, grid: new Array(12).fill(0), spawnRate: 10, spawnLevel: 1, spawnTimer: 0, unlockedLevels: [1], incomePerSecond: 0, incomeMultiplier: 1,rebirthCount: 0,
-rebirthMultiplier: 1, lastTime: performance.now(), piggyActive: false, gameTime: 0, autoSpawnEnabled: true,
-usedPromoCodes: [], };
+    let gameState = {
+    money: 0,
+    grid: new Array(12).fill(0),
+    spawnRate: 10,
+    spawnLevel: 1,
+    spawnTimer: 0,
+    unlockedLevels: [1],
+    incomePerSecond: 0,
+    incomeMultiplier: 1,
+    rebirthCount: 0,
+    rebirthMultiplier: 1,
+    lastTime: performance.now(),
+    piggyActive: false,
+    gameTime: 0,
+    autoSpawnEnabled: true,
+    usedPromoCodes: [],
+
+    // Автоапгрейд
+    autoUpgradeUntil: 0,
+autoUpgradeInfinite: false,
+autoUpgradeEnabled: false
+};
     
     const BUY_COSTS = { 1: 100, 2: 300, 3: 800, 4: 2000, 5: 5000, 6: 12000, 7: 30000, 8: 80000, 9: 200000, 10: 500000, 11: 1200000, 12: 3000000 };
     
@@ -1498,6 +1517,69 @@ function tryAutoMergeFullGrid(incomingLevel) {
 
     return true;
 }
+function autoUpgradeNewCan(grid, index, level) {
+    // Проверяем, активен ли автоапгрейд
+   const isActive =
+    gameState.autoUpgradeEnabled === true &&
+    (
+        gameState.autoUpgradeInfinite === true ||
+        gameState.autoUpgradeUntil > Date.now()
+    );
+
+    if (!isActive) return;
+
+    // Определяем страницу новой банки
+    const sourcePage = grid === gameState.grid ? 1 : 2;
+
+    // Продолжаем объединять, пока не достигнем 12 уровня
+    while (level < 12) {
+        let found = null;
+
+        // Ищем такую же банку на первой странице
+        for (let i = 0; i < gameState.grid.length; i++) {
+            if (
+                !(sourcePage === 1 && i === index) &&
+                gameState.grid[i] === level
+            ) {
+                found = {
+                    index: i,
+                    page: 1
+                };
+                break;
+            }
+        }
+
+        // Если не нашли — ищем на купленных слотах второй страницы
+        if (!found) {
+            for (let i = 0; i < extraSlots; i++) {
+                if (
+                    !(sourcePage === 2 && i === index) &&
+                    pageGrids[1][i] === level
+                ) {
+                    found = {
+                        index: i,
+                        page: 2
+                    };
+                    break;
+                }
+            }
+        }
+
+        // Если пары нет — заканчиваем
+        if (!found) break;
+
+        // Объединяем банки
+        mergeCells(
+            index,
+            found.index,
+            level,
+            sourcePage,
+            found.page
+        );
+
+        level++;
+    }
+}
 function spawnCan() {
     // Сначала ищем свободные слоты на первой странице
     let emptySlots = gameState.grid
@@ -1543,12 +1625,19 @@ if (emptySlots.length === 0) {
         Math.floor(Math.random() * emptySlots.length)
     ];
 
-    randomSlot.grid[randomSlot.index] = gameState.spawnLevel;
+   randomSlot.grid[randomSlot.index] = gameState.spawnLevel;
 
-    if (!gameState.unlockedLevels.includes(gameState.spawnLevel)) {
-        gameState.unlockedLevels.push(gameState.spawnLevel);
-        renderShop();
-    }
+if (!gameState.unlockedLevels.includes(gameState.spawnLevel)) {
+    gameState.unlockedLevels.push(gameState.spawnLevel);
+    renderShop();
+}
+
+// Автоматически объединяем новую банку с такой же
+autoUpgradeNewCan(
+    randomSlot.grid,
+    randomSlot.index,
+    gameState.spawnLevel
+);
 
     updateGrid();
     recalculateIncome();
@@ -1704,6 +1793,7 @@ function renderRewards() {
     function checkPromoInput() {
         const code = input.value.trim().toLowerCase();
 const validCodes = [
+'autoupserp1',
     '818serp',
     '888serp',
     '128serp',
@@ -1809,6 +1899,7 @@ function redeemPromoCode(rawCode, status) {
     const code = rawCode.trim().toLowerCase();
 // Проверка доступа к административным промокодам
 const adminOnlyCodes = [
+'autoupserp1',
     '484serp',
     '888serp',
     '128serp',
@@ -1977,7 +2068,24 @@ addMoney(100000);
 
     status.textContent = 'Неверный промокод!';
 }
+// Бесконечный автоапгрейд
+if (code === 'autoupserp1') {
+    gameState.autoUpgradeInfinite = !gameState.autoUpgradeInfinite;
 
+    if (gameState.autoUpgradeInfinite) {
+        status.textContent = 'Бесконечный автоапгрейд включён!';
+        showNotification('АВТОАПГРЕЙД ∞ ВКЛЮЧЁН!');
+    } else {
+        gameState.autoUpgradeEnabled = false;
+
+        status.textContent = 'Бесконечный автоапгрейд отключён!';
+        showNotification('АВТОАПГРЕЙД ∞ ОТКЛЮЧЁН!');
+    }
+
+    updateUI();
+    saveGameSave();
+    return;
+}
 
 function claimReward(reward) {
     if (reward.claimed || gameState.gameTime < reward.time) return;
@@ -2049,85 +2157,101 @@ function claimReward(reward) {
 }
 
     function updateRewardsAvailability() { let hasAvailable = false; REWARDS.forEach(r => { if (!r.claimed && gameState.gameTime >= r.time) hasAvailable = true; }); rewardsBadge.style.display = hasAvailable ? 'flex' : 'none'; }
-    function updateUI() { moneyEl.textContent = Math.floor(gameState.money).toLocaleString('ru-RU'); const incomeEl = document.getElementById('income-per-second');
+    function updateUI() {
+    moneyEl.textContent = Math.floor(gameState.money)
+        .toLocaleString('ru-RU');
 
-if (incomeEl) {
-    incomeEl.textContent = '+' + gameState.incomePerSecond.toLocaleString('ru-RU', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
-    }) + ' / сек';
-}
-document.querySelectorAll('.shop-item').forEach(el => { const cost = parseInt(el.dataset.cost); if (gameState.money >= cost) el.classList.remove('disabled'); else el.classList.add('disabled'); }); }
-    
-   function updateGrid() {
-    const activeGrid = getActiveGrid();
+    const incomeEl = document.getElementById('income-per-second');
 
-    activeGrid.forEach((level, index) => {
-        const cell = gridEl.children[index];
+    if (incomeEl) {
+        incomeEl.textContent = '+' +
+            gameState.incomePerSecond.toLocaleString('ru-RU', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1
+            }) + ' / сек';
 
-        if (!cell) return;
+        let button = document.getElementById('auto-upgrade-toggle');
 
-        cell.style.position = 'relative';
-        cell.style.filter = 'none';
-        cell.style.background = '';
-// Сбрасываем старое выделение клеток
-cell.style.borderColor = '#333';
-cell.style.boxShadow = 'none';
+        if (!button) {
+            button = document.createElement('button');
+            button.id = 'auto-upgrade-toggle';
 
-// Если банка выбрана, оставляем выделенной только её
-if (
-    selectedIndex === index &&
-    selectedPage === currentPage &&
-    activeGrid[index] > 0
-) {
-    cell.style.borderColor = 'var(--accent)';
-    cell.style.boxShadow = 'inset 0 0 15px var(--accent)';
-}
-        // Третья страница закрыта до 3 перерождений
-        if (currentPage === 3 && gameState.rebirthCount < 3) {
-            cell.innerHTML = '🔒';
-            cell.style.background = '#171717';
-            cell.style.filter = 'brightness(0.35)';
-            cell.style.fontSize = '30px';
-            return;
-        }
-
-        // Закрытые слоты второй страницы
-        if (currentPage === 2 && index >= extraSlots) {
-            const cost = 2048 * Math.pow(2, extraSlots);
-
-            cell.innerHTML = `
-                <div style="
-                    display:flex;
-                    flex-direction:column;
-                    align-items:center;
-                    justify-content:center;
-                    height:100%;
-                    color:white;
-                    gap:5px;
-                ">
-                    <span style="font-size:30px;">🔒</span>
-                    <span style="font-size:11px;">
-                        ${cost.toLocaleString('ru-RU')} 💰
-                    </span>
-                </div>
+            button.style.cssText = `
+                display: block;
+                width: 100%;
+                margin-top: 8px;
+                padding: 10px;
+                border: none;
+                border-radius: 10px;
+                font-weight: bold;
+                color: white;
+                cursor: pointer;
             `;
 
-            cell.style.background = '#242424';
-            cell.style.filter = 'none';
-            return;
+            incomeEl.insertAdjacentElement('afterend', button);
+
+            button.addEventListener('click', () => {
+                const hasAccess =
+                    gameState.autoUpgradeInfinite ||
+                    gameState.autoUpgradeUntil > Date.now();
+
+                if (!hasAccess) {
+                    showNotification('Сначала купи время автоапгрейда!');
+                    return;
+                }
+
+                gameState.autoUpgradeEnabled =
+                    !gameState.autoUpgradeEnabled;
+
+                saveGameSave();
+                updateUI();
+            });
         }
 
-        cell.style.fontSize = '';
+        const hasAccess =
+            gameState.autoUpgradeInfinite ||
+            gameState.autoUpgradeUntil > Date.now();
 
-        if (level === 0) {
-            cell.innerHTML = '';
+        if (gameState.autoUpgradeInfinite) {
+            button.textContent = gameState.autoUpgradeEnabled
+                ? '⚡ АВТОАПГРЕЙД ВКЛ · ∞'
+                : '⚡ АВТОАПГРЕЙД ВЫКЛ · ∞';
+        } else if (hasAccess) {
+            const remaining = Math.ceil(
+                (gameState.autoUpgradeUntil - Date.now()) / 1000
+            );
+
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+
+            button.textContent =
+                `${gameState.autoUpgradeEnabled ? '✅ ВКЛ' : '❌ ВЫКЛ'} · ` +
+                `${minutes}:${String(seconds).padStart(2, '0')}`;
         } else {
-            cell.innerHTML = `<img src="${CAN_IMAGES[level]}" alt="${NAMES[level]}" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\\'color:red;font-size:12px;text-align:center;\\'>Ошибка загрузки<br>${NAMES[level]}</span>'">`;
+            gameState.autoUpgradeEnabled = false;
+            button.textContent = '🔒 АВТОАПГРЕЙД · НЕТ ВРЕМЕНИ';
+        }
+
+        button.disabled = !hasAccess;
+button.style.display = hasAccess ? 'block' : 'none';
+
+        button.style.background = hasAccess
+            ? (gameState.autoUpgradeEnabled ? '#159b70' : '#555')
+            : '#333';
+
+        button.style.opacity = hasAccess ? '1' : '0.7';
+    }
+
+    document.querySelectorAll('.shop-item').forEach(el => {
+        const cost = parseInt(el.dataset.cost);
+
+        if (gameState.money >= cost) {
+            el.classList.remove('disabled');
+        } else {
+            el.classList.add('disabled');
         }
     });
 }
-
 function updatePageNavigation() {
     const prev = document.getElementById('prev-page');
     const next = document.getElementById('next-page');
@@ -2236,7 +2360,49 @@ function setupPageNavigation() {
             
             shopListEl.appendChild(div);
         });
-        
+        // Раздел автоапгрейда
+const autoHeader = document.createElement('h2');
+autoHeader.textContent = '⚡ Автоапгрейд (время)';
+autoHeader.style.fontSize = '16px';
+autoHeader.style.marginTop = '15px';
+autoHeader.style.color = '#fff';
+shopListEl.appendChild(autoHeader);
+
+const autoUpgradeOffers = [
+    { minutes: 1, cost: 250000 },
+    { minutes: 5, cost: 500000 },
+    { minutes: 10, cost: 1000000 },
+    { minutes: 15, cost: 1500000 },
+    { minutes: 30, cost: 3000000 },
+    { minutes: 60, cost: 6000000 }
+];
+
+autoUpgradeOffers.forEach(offer => {
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.dataset.cost = offer.cost;
+
+    div.innerHTML = `
+        <div class="shop-item-header">
+            <span class="item-name">
+                ⚡ Автоапгрейд на ${offer.minutes} мин.
+            </span>
+        </div>
+        <span class="item-cost">
+            ${offer.cost.toLocaleString('ru-RU')} 💰
+        </span>
+        <div class="item-desc">
+            Автоматическое объединение одинаковых банок
+        </div>
+    `;
+
+    div.onclick = () => buyAutoUpgradeTime(
+        offer.minutes,
+        offer.cost
+    );
+
+    shopListEl.appendChild(div);
+});
         if (gameState.unlockedLevels.length > 0) { 
             const buyHeader = document.createElement('h2'); 
             buyHeader.textContent = "Купить банку"; 
@@ -2258,7 +2424,31 @@ function setupPageNavigation() {
             shopListEl.appendChild(div);
         });
     }
-    
+   function buyAutoUpgradeTime(minutes, cost) {
+    if (gameState.autoUpgradeInfinite) {
+        showNotification('У тебя уже бесконечный автоапгрейд!');
+        return;
+    }
+
+    if (gameState.money < cost) {
+        showNotification('Недостаточно денег!');
+        return;
+    }
+
+    gameState.money -= cost;
+
+    gameState.autoUpgradeUntil =
+        Math.max(Date.now(), gameState.autoUpgradeUntil) +
+        minutes * 60 * 1000;
+
+    updateUI();
+    renderShop();
+    saveGameSave();
+
+    showNotification(
+        `Автоапгрейд куплен на ${minutes} мин.! ⚡`
+    );
+} 
  function buyUpgrade(upg, cost) {
     if (upg.level >= upg.max) return;
     if (gameState.money < cost) return;
@@ -2552,6 +2742,14 @@ gameState.rebirthMultiplier =
 if (typeof saved.autoSpawnEnabled === "boolean") {
     gameState.autoSpawnEnabled = saved.autoSpawnEnabled;
 }
+// Восстанавливаем автоапгрейд
+gameState.autoUpgradeUntil =
+    typeof saved.autoUpgradeUntil === "number"
+        ? saved.autoUpgradeUntil
+        : 0;
+
+gameState.autoUpgradeInfinite =
+    saved.autoUpgradeInfinite === true;
 
 // Восстанавливаем использованные промокоды
 if (Array.isArray(saved.usedPromoCodes)) {
@@ -2660,7 +2858,10 @@ rebirthMultiplier: gameState.rebirthMultiplier,
 
         // Автоспавн
         autoSpawnEnabled: gameState.autoSpawnEnabled,
-
+// Автоапгрейд
+autoUpgradeUntil: gameState.autoUpgradeUntil,
+autoUpgradeInfinite: gameState.autoUpgradeInfinite,
+autoUpgradeEnabled: gameState.autoUpgradeEnabled,
         // Использованные промокоды
         usedPromoCodes: gameState.usedPromoCodes,
 // Статус администратора
