@@ -177,25 +177,26 @@ gap: 10px;}
         display: none !important;
     }
 }
-      body.device-phone .grid {
-    width: calc(100% - 35px);
-    margin-left: 35px;
+body.device-phone .grid {
+    width: 100%;
+    margin-left: 0;
     margin-right: 0;
     align-self: flex-start;
     box-sizing: border-box;
-    grid-template-columns: repeat(3,minmax(0,1fr));
-    grid-template-rows: repeat(4,auto);
-    gap: 7px;
-    padding: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding: 4px;
     border-width: 2px;
-    margin-bottom: 7px;
+    margin-bottom: 4px;
 }
-      body.device-phone .cell {
+    body.device-phone .cell {
     width: 100%;
     height: auto;
-    aspect-ratio: .78;
+    aspect-ratio: 0.95;
     min-width: 0;
-    border-radius: 9px;
+    min-height: 0;
+    border-radius: 8px;
     border-width: 1px;
     touch-action: none !important;
     user-select: none;
@@ -391,28 +392,6 @@ body.device-phone .mobile-page-nav {
             <div class="trash-section" id="trash"><div class="trash-icon">🗑️</div><div>Удалить банку</div></div>
         </div>
     </div>
-<!-- Ползунок прокрутки страницы -->
-<div class="mobile-page-nav" id="mobile-page-nav">
-    <input
-        type="range"
-        id="page-scroll-slider"
-        min="0"
-        max="1000"
-        value="0"
-        aria-label="Прокрутка экрана"
-        style="
-            writing-mode: vertical-lr;
-            direction: rtl;
-            width: 32px;
-            height: 150px;
-            margin: 0;
-            padding: 0;
-            accent-color: #80D8D0;
-            cursor: pointer;
-            touch-action: none;
-        "
-    >
-</div>
     <div class="notification" id="notification"></div>
     <div class="modal-overlay" id="rewards-modal">
         <div class="modal-content">
@@ -2653,21 +2632,6 @@ document.getElementById('device-start').addEventListener('click', async () => {
     deviceGate.remove();
 
     gameState.lastTime = performance.now();
-// Ползунок прокрутки страницы
-const pageScrollSlider = document.getElementById('page-scroll-slider');
-
-if (pageScrollSlider) {
-    pageScrollSlider.addEventListener('input', () => {
-        const maxScroll =
-            document.documentElement.scrollHeight - window.innerHeight;
-
-        const scrollPosition =
-            (Number(pageScrollSlider.value) / 1000) * maxScroll;
-
-        window.scrollTo({
-            top: scrollPosition,
-            behavior: 'auto'
-        });
     });
 
     window.addEventListener('scroll', () => {
