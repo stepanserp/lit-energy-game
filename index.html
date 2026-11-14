@@ -884,6 +884,37 @@ function createGrid() {
             }, 500);
 
             const target = document.elementFromPoint(e.clientX, e.clientY);
+// Если отпустили банку над корзиной — удаляем её
+const trashTarget = target ? target.closest('#trash') : null;
+
+if (trashTarget) {
+    const sourceGrid = drag.page === 1
+        ? gameState.grid
+        : pageGrids[drag.page - 1];
+
+    const level = sourceGrid[drag.index];
+
+    if (level > 0) {
+        sourceGrid[drag.index] = 0;
+
+        if (
+            selectedIndex === drag.index &&
+            selectedPage === drag.page
+        ) {
+            selectedIndex = null;
+            selectedPage = null;
+        }
+
+        updateGrid();
+        recalculateIncome();
+        updateUI();
+        saveGameSave();
+
+        showNotification(`Удалена: ${NAMES[level]}`);
+    }
+
+    return;
+}
             const targetCell = target ? target.closest('.cell') : null;
 
             if (!targetCell) return;
@@ -2354,7 +2385,9 @@ gameState.rebirthMultiplier =
         : Math.pow(1.25, gameState.rebirthCount);
 
 
-        if (typeof saved.gameTime === "number") {
+        if (typeof saved.gameTime === "number" && Number.isFinite(saved.gameTime)) {
+    gameState.gameTime = Math.max(0, saved.gameTime);
+}
        // Восстанавливаем состояние автоспавна
 if (typeof saved.autoSpawnEnabled === "boolean") {
     gameState.autoSpawnEnabled = saved.autoSpawnEnabled;
