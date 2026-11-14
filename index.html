@@ -516,7 +516,8 @@ let pageGrids = [
     // Автоапгрейд
     autoUpgradeUntil: 0,
 autoUpgradeInfinite: false,
-autoUpgradeEnabled: false
+autoUpgradeEnabled: false,
+autoUpgradePausedRemaining: 0
 };
     
     const BUY_COSTS = { 1: 100, 2: 300, 3: 800, 4: 2000, 5: 5000, 6: 12000, 7: 30000, 8: 80000, 9: 200000, 10: 500000, 11: 1200000, 12: 3000000 };
@@ -1692,7 +1693,7 @@ if (emptySlots.length === 0) {
     }
 
     const sellPrice = Math.floor(
-        (BUY_COSTS[level] || 100) / 2
+        (BUY_COSTS[level] || 100) / 10
     );
 
     addMoney(sellPrice);
@@ -2050,6 +2051,10 @@ if (code === '303serp') {
 if (code === '128serp') {
     // Баланс и банки
     gameState.money = 0;
+// Сбрасываем автоапгрейд
+gameState.autoUpgradeUntil = 0;
+gameState.autoUpgradePausedRemaining = 0;
+gameState.autoUpgradeEnabled = false;
     gameState.grid = new Array(12).fill(0);
 
     // Сброс всех дополнительных страниц
@@ -2271,56 +2276,84 @@ function claimReward(reward) {
             incomeEl.insertAdjacentElement('afterend', button);
 
             button.addEventListener('click', () => {
-                const hasAccess =
-                    gameState.autoUpgradeInfinite ||
-                    gameState.autoUpgradeUntil > Date.now();
+    if (gameState.autoUpgradeInfinite) {
+        gameState.autoUpgradeEnabled =
+            !gameState.autoUpgradeEnabled;
+    } else if (gameState.autoUpgradeEnabled) {
+        // Выключаем и сохраняем оставшееся время
+        gameState.autoUpgradePausedRemaining = Math.max(
+            0,
+            gameState.autoUpgradeUntil - Date.now()
+        );
 
-                if (!hasAccess) {
-                    showNotification('Сначала купи время автоапгрейда!');
-                    return;
-                }
+        gameState.autoUpgradeUntil = 0;
+        gameState.autoUpgradeEnabled = false;
+    } else {
+        // Возобновляем отсчёт
+        const remaining = gameState.autoUpgradePausedRemaining || 0;
 
-                gameState.autoUpgradeEnabled =
-                    !gameState.autoUpgradeEnabled;
-
-                saveGameSave();
-                updateUI();
-            });
+        if (remaining <= 0) {
+            showNotification('Время автоапгрейда закончилось!');
+            updateUI();
+            return;
         }
 
-        const hasAccess =
-            gameState.autoUpgradeInfinite ||
-            gameState.autoUpgradeUntil > Date.now();
-
-        if (gameState.autoUpgradeInfinite) {
-            button.textContent = gameState.autoUpgradeEnabled
-                ? '⚡ АВТОАПГРЕЙД ВКЛ · ∞'
-                : '⚡ АВТОАПГРЕЙД ВЫКЛ · ∞';
-        } else if (hasAccess) {
-            const remaining = Math.ceil(
-                (gameState.autoUpgradeUntil - Date.now()) / 1000
-            );
-
-            const minutes = Math.floor(remaining / 60);
-            const seconds = remaining % 60;
-
-            button.textContent =
-                `${gameState.autoUpgradeEnabled ? '✅ ВКЛ' : '❌ ВЫКЛ'} · ` +
-                `${minutes}:${String(seconds).padStart(2, '0')}`;
-        } else {
-            gameState.autoUpgradeEnabled = false;
-            button.textContent = '🔒 АВТОАПГРЕЙД · НЕТ ВРЕМЕНИ';
-        }
-
-        button.disabled = !hasAccess;
-button.style.display = hasAccess ? 'block' : 'none';
-
-        button.style.background = hasAccess
-            ? (gameState.autoUpgradeEnabled ? '#159b70' : '#555')
-            : '#333';
-
-        button.style.opacity = hasAccess ? '1' : '0.7';
+        gameState.autoUpgradeUntil = Date.now() + remaining;
+        gameState.autoUpgradePausedRemaining = 0;
+        gameState.autoUpgradeEnabled = true;
     }
+
+    saveGameSave();
+    updateUI();
+});
+        }
+
+       const isInfinite = gameState.autoUpgradeInfinite === true;
+
+let remaining;
+
+if (gameState.autoUpgradeEnabled) {
+    remaining = Math.max(
+        0,
+        gameState.autoUpgradeUntil - Date.now()
+    );
+} else {
+    remaining = Math.max(
+        0,
+        gameState.autoUpgradePausedRemaining || 0
+    );
+}
+
+// Если время закончилось
+if (!isInfinite && gameState.autoUpgradeEnabled && remaining <= 0) {
+    gameState.autoUpgradeEnabled = false;
+    gameState.autoUpgradeUntil = 0;
+    gameState.autoUpgradePausedRemaining = 0;
+}
+
+const hasAccess = isInfinite || remaining > 0;
+
+if (isInfinite) {
+    button.textContent = gameState.autoUpgradeEnabled
+        ? '⚡ АВТОАПГРЕЙД ВКЛ · ∞'
+        : '⚡ АВТОАПГРЕЙД ВЫКЛ · ∞';
+} else if (hasAccess) {
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+
+    button.textContent =
+        `${gameState.autoUpgradeEnabled ? '✅ ВКЛ' : '❌ ВЫКЛ'} · ` +
+        `${minutes}:${String(seconds).padStart(2, '0')}`;
+} else {
+    button.textContent = '🔒 АВТОАПГРЕЙД · НЕТ ВРЕМЕНИ';
+}
+
+button.disabled = !hasAccess;
+button.style.display = hasAccess ? 'block' : 'none';
+button.style.background = hasAccess
+    ? (gameState.autoUpgradeEnabled ? '#159b70' : '#555')
+    : '#333';
+button.style.opacity = hasAccess ? '1' : '0.7';
 
     document.querySelectorAll('.shop-item').forEach(el => {
         const cost = parseInt(el.dataset.cost);
@@ -2504,7 +2537,7 @@ autoUpgradeOffers.forEach(offer => {
             shopListEl.appendChild(div);
         });
     }
-   function buyAutoUpgradeTime(minutes, cost) {
+ function buyAutoUpgradeTime(minutes, cost) {
     if (gameState.autoUpgradeInfinite) {
         showNotification('У тебя уже бесконечный автоапгрейд!');
         return;
@@ -2517,9 +2550,15 @@ autoUpgradeOffers.forEach(offer => {
 
     gameState.money -= cost;
 
-    gameState.autoUpgradeUntil =
-        Math.max(Date.now(), gameState.autoUpgradeUntil) +
-        minutes * 60 * 1000;
+    const addedTime = minutes * 60 * 1000;
+
+    if (gameState.autoUpgradeEnabled) {
+        gameState.autoUpgradeUntil =
+            Math.max(Date.now(), gameState.autoUpgradeUntil) + addedTime;
+    } else {
+        gameState.autoUpgradePausedRemaining =
+            (gameState.autoUpgradePausedRemaining || 0) + addedTime;
+    }
 
     updateUI();
     renderShop();
@@ -2528,7 +2567,7 @@ autoUpgradeOffers.forEach(offer => {
     showNotification(
         `Автоапгрейд куплен на ${minutes} мин.! ⚡`
     );
-} 
+}
  function buyUpgrade(upg, cost) {
     if (upg.level >= upg.max) return;
     if (gameState.money < cost) return;
@@ -2586,6 +2625,10 @@ function performRebirth() {
     gameState.rebirthMultiplier *= 1.25;
 
     gameState.money = 0;
+// Сбрасываем время автоапгрейда после перерождения
+gameState.autoUpgradeUntil = 0;
+gameState.autoUpgradePausedRemaining = 0;
+gameState.autoUpgradeEnabled = false;
     gameState.grid = new Array(12).fill(0);
 pageGrids[1] = new Array(12).fill(0);
 pageGrids[2] = new Array(12).fill(0);
@@ -2830,6 +2873,13 @@ gameState.autoUpgradeUntil =
 
 gameState.autoUpgradeInfinite =
     saved.autoUpgradeInfinite === true;
+gameState.autoUpgradeEnabled =
+    saved.autoUpgradeEnabled === true;
+
+gameState.autoUpgradePausedRemaining =
+    typeof saved.autoUpgradePausedRemaining === "number"
+        ? saved.autoUpgradePausedRemaining
+        : 0;
 
 // Восстанавливаем использованные промокоды
 if (Array.isArray(saved.usedPromoCodes)) {
@@ -2942,6 +2992,7 @@ rebirthMultiplier: gameState.rebirthMultiplier,
 autoUpgradeUntil: gameState.autoUpgradeUntil,
 autoUpgradeInfinite: gameState.autoUpgradeInfinite,
 autoUpgradeEnabled: gameState.autoUpgradeEnabled,
+autoUpgradePausedRemaining: gameState.autoUpgradePausedRemaining,
         // Использованные промокоды
         usedPromoCodes: gameState.usedPromoCodes,
 // Статус администратора
