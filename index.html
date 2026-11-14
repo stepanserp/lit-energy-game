@@ -710,21 +710,17 @@ function setupAutoSpawnToggle() {
         const bottomBar = document.createElement('div');
         bottomBar.id = 'mobile-bottom-bar';
 
-        bottomBar.style.cssText = `
-            position: fixed;
-            left: 10px;
-            right: 10px;
-            bottom: calc(10px + env(safe-area-inset-bottom));
-            z-index: 99999;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-            padding: 8px;
-            background: rgba(20, 20, 25, 0.96);
-            border: 1px solid #444;
-            border-radius: 16px;
-            box-sizing: border-box;
-        `;
+      bottomBar.style.cssText = `
+    position: relative;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 0;
+    margin-top: 8px;
+    background: transparent;
+    box-sizing: border-box;
+`;
 
         const controls = [
             giftsButton,
@@ -738,21 +734,23 @@ function setupAutoSpawnToggle() {
 
             bottomBar.appendChild(control);
 
-            control.style.cssText += `
-                width: 100%;
-                height: 54px;
-                min-width: 0;
-                margin: 0;
-                padding: 4px;
-                box-sizing: border-box;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 12px;
-                font-size: 22px;
-                font-weight: bold;
-                cursor: pointer;
-            `;
+         control.style.cssText += `
+    width: 100%;
+    height: 54px;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    margin: 0;
+    padding: 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+`;
 
             if (index === 0) {
                 control.textContent = '🎁';
@@ -770,8 +768,8 @@ function setupAutoSpawnToggle() {
             }
         });
 
-        document.body.appendChild(bottomBar);
-        document.body.style.paddingBottom = '90px';
+       spawnBar.parentElement.insertAdjacentElement('afterend', bottomBar);
+document.body.style.paddingBottom = '0';
 
     } else {
         const anchor = spawnBar.parentElement;
